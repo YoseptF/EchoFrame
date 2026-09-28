@@ -23,10 +23,17 @@ function library() {
   };
 }
 
-test("profiles keep separate libraries", async () => {
+const account = (id: string, name: string) => ({
+  id,
+  name,
+  email: `${id}@example.com`,
+  picture: null,
+});
+
+test("each account keeps a separate library", async () => {
   const { library: lib } = library();
-  const ada = await lib.createProfile("  Ada   Lovelace ");
-  const grace = await lib.createProfile("Grace");
+  const ada = await lib.saveProfile(account("ada", "  Ada   Lovelace "));
+  const grace = await lib.saveProfile(account("grace", "Grace"));
   expect(ada.name).toBe("Ada Lovelace");
   await lib.createFolder(ada.id, "Forest talk");
   expect(await lib.folders(ada.id)).toHaveLength(1);
@@ -37,9 +44,26 @@ test("profiles keep separate libraries", async () => {
   expect(await lib.folders(ada.id)).toHaveLength(0);
 });
 
+test("signing in again updates the account without losing its library", async () => {
+  const { library: lib } = library();
+  const first = await lib.saveProfile(account("ada", "Ada"));
+  await lib.createFolder("ada", "Forest");
+  const again = await lib.saveProfile({
+    ...account("ada", "Ada Lovelace"),
+    picture: "https://example.com/ada.png",
+  });
+  expect(again).toMatchObject({
+    name: "Ada Lovelace",
+    picture: "https://example.com/ada.png",
+    createdAt: first.createdAt,
+  });
+  expect(await lib.profiles()).toHaveLength(1);
+  expect(await lib.folders("ada")).toHaveLength(1);
+});
+
 test("settings belong to one profile", async () => {
   const { library: lib } = library();
-  const profile = await lib.createProfile("Ada");
+  const profile = await lib.saveProfile(account("ada", "Ada"));
   expect(await lib.settings(profile.id)).toEqual({});
   await lib.saveSettings(profile.id, { jevKey: "ts_123" });
   expect(await lib.settings(profile.id)).toEqual({ jevKey: "ts_123" });
@@ -47,7 +71,7 @@ test("settings belong to one profile", async () => {
 
 test("folders summarize their assets and sort by recent activity", async () => {
   const { library: lib } = library();
-  const { id: profile } = await lib.createProfile("Ada");
+  const { id: profile } = await lib.saveProfile(account("ada", "Ada"));
   const older = await lib.createFolder(profile, "Older");
   const newer = await lib.createFolder(profile, "");
   expect(newer.name).toBe("Untitled folder");
@@ -72,7 +96,7 @@ test("folders summarize their assets and sort by recent activity", async () => {
 
 test("files become typed assets; text is stored inline and media as a blob", async () => {
   const { library: lib, store } = library();
-  const { id: profile } = await lib.createProfile("Ada");
+  const { id: profile } = await lib.saveProfile(account("ada", "Ada"));
   const { id: folder } = await lib.createFolder(profile, "Forest");
   const bytes = new Uint8Array([9, 8, 7]);
 
@@ -112,7 +136,7 @@ test("files become typed assets; text is stored inline and media as a blob", asy
 
 test("asset edits normalize tags and keep content for text only", async () => {
   const { library: lib } = library();
-  const { id: profile } = await lib.createProfile("Ada");
+  const { id: profile } = await lib.saveProfile(account("ada", "Ada"));
   const { id: folder } = await lib.createFolder(profile, "Forest");
   const note = await lib.addNote(profile, folder, {
     name: "Evaporation",
@@ -135,7 +159,7 @@ test("asset edits normalize tags and keep content for text only", async () => {
 
 test("folder config is normalized on read and write", async () => {
   const { library: lib } = library();
-  const { id: profile } = await lib.createProfile("Ada");
+  const { id: profile } = await lib.saveProfile(account("ada", "Ada"));
   const folder = await lib.createFolder(profile, "Forest");
   const updated = await lib.updateFolder(profile, folder.id, {
     name: "Water engine",

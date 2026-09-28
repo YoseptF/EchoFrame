@@ -8,7 +8,16 @@ import type { FileStore } from "./store";
 //   profiles/<profile>/folders/<folder>/assets/<asset>.json   metadata, text inline
 //   profiles/<profile>/folders/<folder>/assets/<asset>.blob   image or audio bytes
 
-export type Profile = { id: string; name: string; createdAt: string };
+/** The local library of one signed-in account on this device. */
+export type Profile = {
+  id: string;
+  name: string;
+  email: string | null;
+  picture: string | null;
+  createdAt: string;
+};
+
+export type Account = Pick<Profile, "id" | "name" | "email" | "picture">;
 
 export type ProfileSettings = { jevKey?: string };
 
@@ -162,27 +171,21 @@ export class Library {
     return (await this.profiles()).find((profile) => profile.id === id) ?? null;
   }
 
-  async createProfile(name: string) {
-    const profile: Profile = {
-      id: this.newId(),
-      name: cleanName(name, "Speaker"),
-      createdAt: this.now(),
-    };
-    await this.writeJson("profiles.json", [
-      ...(await this.profiles()),
-      profile,
-    ]);
-    return profile;
-  }
-
-  async renameProfile(id: string, name: string) {
+  /** Creates the account's library on first sign-in and keeps its details current. */
+  async saveProfile(account: Account) {
     const profiles = await this.profiles();
-    const updated = profiles.map((profile) =>
-      profile.id === id
-        ? { ...profile, name: cleanName(name, profile.name) }
-        : profile,
-    );
-    await this.writeJson("profiles.json", updated);
+    const existing = profiles.find((profile) => profile.id === account.id);
+    const profile: Profile = {
+      ...account,
+      name: cleanName(account.name, "Speaker"),
+      createdAt: existing?.createdAt ?? this.now(),
+    };
+    if (JSON.stringify(existing) !== JSON.stringify(profile))
+      await this.writeJson("profiles.json", [
+        ...profiles.filter((item) => item.id !== account.id),
+        profile,
+      ]);
+    return profile;
   }
 
   async removeProfile(id: string) {

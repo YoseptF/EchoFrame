@@ -9,48 +9,76 @@ import {
   type ReactNode,
 } from "react";
 import { toast } from "sonner";
-import { Library, type Asset, type Profile } from "@/lib/library/library";
+import {
+  Library,
+  type Account,
+  type Asset,
+  type Profile,
+} from "@/lib/library/library";
 import { opfsStore } from "@/lib/library/store";
 
-const sessionKey = "echoframe.profile";
+// The last signed-in account, so the library still opens without a connection.
+const accountKey = "echoframe.account";
 
 type LibraryState = {
   library: Library;
   /** Bumped after every change so readers reload. */
   revision: number;
   refresh: () => void;
+  /** The signed-in account's library on this device. */
   profile: Profile | null;
-  /** False until the remembered profile has been checked. */
+  /** False until the session has been checked. */
   ready: boolean;
-  signIn: (profile: Profile) => void;
-  signOut: () => void;
+  /** Whether this deployment has Google sign-in configured. */
+  google: boolean;
+  /** True when the session couldn't be checked and the cached account was used. */
+  offline: boolean;
+  signOut: () => Promise<void>;
 };
 
 const LibraryContext = createContext<LibraryState | null>(null);
+
+function cachedAccount(): Account | null {
+  try {
+    return JSON.parse(localStorage.getItem(accountKey) ?? "null");
+  } catch {
+    return null;
+  }
+}
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
   const library = useMemo(() => new Library(opfsStore()), []);
   const [revision, setRevision] = useState(0);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [ready, setReady] = useState(false);
+  const [google, setGoogle] = useState(false);
+  const [offline, setOffline] = useState(false);
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
 
   useEffect(() => {
-    const id = localStorage.getItem(sessionKey);
-    if (!id) return setReady(true);
-    library
-      .profile(id)
-      .then(setProfile)
+    async function open(account: Account) {
+      setProfile(await library.saveProfile(account));
+      // Ask the browser not to evict the library under storage pressure.
+      navigator.storage?.persist?.();
+    }
+    fetch("/api/session")
+      .then(
+        (response) =>
+          response.json() as Promise<{ user: Account | null; google: boolean }>,
+      )
+      .then(async ({ user, google }) => {
+        setGoogle(google);
+        if (!user) return localStorage.removeItem(accountKey);
+        localStorage.setItem(accountKey, JSON.stringify(user));
+        await open(user);
+      })
+      .catch(async () => {
+        const account = cachedAccount();
+        setOffline(true);
+        if (account) await open(account);
+      })
       .finally(() => setReady(true));
   }, [library]);
-
-  // Keep the signed-in profile's name current after a rename.
-  useEffect(() => {
-    if (profile)
-      library.profile(profile.id).then((current) => {
-        if (current && current.name !== profile.name) setProfile(current);
-      });
-  }, [library, revision, profile]);
 
   const value = useMemo<LibraryState>(
     () => ({
@@ -59,18 +87,15 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       refresh,
       profile,
       ready,
-      signIn(next) {
-        localStorage.setItem(sessionKey, next.id);
-        // Ask the browser not to evict the library under storage pressure.
-        navigator.storage?.persist?.();
-        setProfile(next);
-      },
-      signOut() {
-        localStorage.removeItem(sessionKey);
-        setProfile(null);
+      google,
+      offline,
+      async signOut() {
+        await fetch("/auth/sign-out", { method: "POST" }).catch(() => {});
+        localStorage.removeItem(accountKey);
+        window.location.assign("/");
       },
     }),
-    [library, revision, refresh, profile, ready],
+    [library, revision, refresh, profile, ready, google, offline],
   );
 
   return (

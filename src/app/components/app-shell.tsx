@@ -7,7 +7,6 @@ import {
   LogOut,
   MoveUpRight,
   Settings,
-  UsersRound,
 } from "lucide-react";
 import { Link, useLocation, useRoute } from "wouter";
 import { Brand } from "@/components/brand";
@@ -63,7 +62,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 function AppSidebar() {
   const profile = useProfile();
-  const { signOut } = useLibrary();
+  const { signOut, offline } = useLibrary();
   const [location, navigate] = useLocation();
   const { setOpenMobile } = useSidebar();
   const [onDashboard] = useRoute("/");
@@ -174,13 +173,19 @@ function AppSidebar() {
                   size="lg"
                   className="data-[state=open]:bg-sidebar-accent"
                 >
-                  <ProfileAvatar name={profile.name} className="size-8" />
+                  <ProfileAvatar
+                    name={profile.name}
+                    picture={profile.picture}
+                    className="size-8"
+                  />
                   <span className="grid flex-1 text-left leading-tight">
                     <span className="truncate text-sm font-semibold">
                       {profile.name}
                     </span>
                     <span className="truncate text-xs text-muted-foreground">
-                      Stored on this device
+                      {offline
+                        ? "Offline"
+                        : (profile.email ?? "Google account")}
                     </span>
                   </span>
                   <ChevronsUpDown className="ml-auto size-4" />
@@ -192,27 +197,14 @@ function AppSidebar() {
                 className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
               >
                 <DropdownMenuLabel className="font-normal text-muted-foreground">
-                  Signed in as {profile.name}
+                  Signed in with Google
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => navigate("/settings")}>
                   <Settings /> Settings
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => {
-                    signOut();
-                    navigate("/sign-in");
-                  }}
-                >
-                  <UsersRound /> Switch profile
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={() => {
-                    signOut();
-                    window.location.assign("/");
-                  }}
-                >
+                <DropdownMenuItem onSelect={() => signOut()}>
                   <LogOut /> Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>

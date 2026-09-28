@@ -1,91 +1,62 @@
-import { useState, type FormEvent } from "react";
 import { motion } from "motion/react";
-import {
-  ArrowRight,
-  FolderOpen,
-  HardDrive,
-  KeyRound,
-  WifiOff,
-} from "lucide-react";
-import { useLocation } from "wouter";
+import { CircleAlert, HardDrive, KeyRound, WifiOff } from "lucide-react";
+import { Redirect, useSearchParams } from "wouter";
 import { AuroraField } from "@/components/effects/aurora-field";
 import { useEffects } from "@/components/effects/motion-system";
 import { Brand } from "@/components/brand";
-import { Badge } from "@/components/ui/badge";
+import { GoogleIcon } from "@/components/google-icon";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Field,
-  FieldDescription,
-  FieldLabel,
-  FieldSeparator,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import {
   Item,
-  ItemActions,
   ItemContent,
   ItemDescription,
   ItemGroup,
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
-import { Skeleton } from "@/components/ui/skeleton";
-import type { Profile } from "@/lib/library/library";
-import { ProfileAvatar } from "../components/profile-avatar";
-import {
-  useLibrary,
-  useLibraryAction,
-  useLibraryData,
-} from "../library-context";
+import { useLibrary } from "../library-context";
 
 const promises = [
   {
     icon: HardDrive,
-    title: "Your library stays here",
-    text: "Folders, images, audio, and notes are stored in this browser, not on a server.",
+    title: "Kept on this device",
+    text: "Your images, audio, and notes stay in this browser. Google only confirms who you are.",
   },
   {
     icon: WifiOff,
     title: "Works offline",
-    text: "Organize and tag material without a connection. Live sessions call Jev when you present.",
+    text: "Once you’ve signed in, your library opens and stays editable without a connection.",
   },
   {
     icon: KeyRound,
     title: "Your own Jev key",
-    text: "Each profile keeps its own key. Add it in Settings before your first live session.",
+    text: "Add it in Settings before your first live session.",
   },
 ];
 
+const errors: Record<string, string> = {
+  cancelled: "Sign-in was cancelled. Choose an account to continue.",
+  state: "That sign-in attempt expired. Try again.",
+  google: "Google couldn’t confirm your account. Try again in a moment.",
+  unavailable: "Google sign-in isn’t set up on this server yet.",
+};
+
 export function SignInPage() {
-  const { signIn } = useLibrary();
-  const act = useLibraryAction();
-  const [, navigate] = useLocation();
+  const { profile, ready, google, offline } = useLibrary();
   const { enabled } = useEffects();
-  const profiles = useLibraryData((library) => library.profiles(), []);
-  const [name, setName] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [params] = useSearchParams();
+  const error = errors[params.get("error") ?? ""];
 
-  function enter(profile: Profile) {
-    signIn(profile);
-    navigate("/");
-  }
-
-  async function create(event: FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    const profile = await act((library) => library.createProfile(name));
-    setBusy(false);
-    if (profile) enter(profile);
-  }
-
-  const existing = profiles.data ?? [];
+  if (ready && profile && !offline) return <Redirect to="/" replace />;
 
   return (
     <main>
@@ -101,27 +72,19 @@ export function SignInPage() {
           >
             <Brand />
           </a>
-          <div>
-            <Badge
-              variant="outline"
-              className="gap-2 rounded-full border-primary/20 bg-primary/5 px-3 py-1.5 text-[10px] tracking-[0.12em] text-primary"
-            >
-              <FolderOpen className="size-3" /> YOUR LIBRARY, YOUR DEVICE
-            </Badge>
-            <motion.h1
-              initial={
-                enabled ? { opacity: 0, y: 30, filter: "blur(8px)" } : false
-              }
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-              className="mt-6 max-w-3xl text-[clamp(2.4rem,4.6vw,5.5rem)] leading-[1.04] font-medium tracking-[-0.06em]"
-            >
-              Gather the material.{" "}
-              <span className="bg-gradient-to-r from-primary via-[#a7f5bf] to-[#66d7e6] bg-clip-text text-transparent">
-                Let your voice arrange it.
-              </span>
-            </motion.h1>
-          </div>
+          <motion.h1
+            initial={
+              enabled ? { opacity: 0, y: 30, filter: "blur(8px)" } : false
+            }
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+            className="max-w-3xl text-[clamp(2.4rem,4.6vw,5.5rem)] leading-[1.04] font-medium tracking-[-0.06em]"
+          >
+            Gather the material.{" "}
+            <span className="bg-gradient-to-r from-primary via-[#a7f5bf] to-[#66d7e6] bg-clip-text text-transparent">
+              Let your voice arrange it.
+            </span>
+          </motion.h1>
           <ItemGroup className="grid gap-3 sm:grid-cols-3">
             {promises.map(({ icon: Icon, title, text }) => (
               <Item
@@ -147,82 +110,58 @@ export function SignInPage() {
           <Card className="w-full max-w-lg bg-card/85 backdrop-blur-md lg:ml-auto">
             <CardHeader>
               <CardTitle className="text-2xl tracking-[-0.04em]">
-                {existing.length ? "Who’s presenting?" : "Create your profile"}
+                Sign in to EchoFrame
               </CardTitle>
               <CardDescription>
-                {existing.length
-                  ? "Choose a profile on this device, or start a new one."
-                  : "A profile keeps your folders and Jev key separate from anyone else using this device."}
+                Use your Google account to open your library.
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-6">
-              {profiles.loading && !profiles.data ? (
-                <Skeleton className="h-16 w-full" />
-              ) : (
-                existing.length > 0 && (
-                  <ItemGroup className="gap-2">
-                    {existing.map((profile) => (
-                      <Item key={profile.id} variant="outline" asChild>
-                        <button
-                          type="button"
-                          onClick={() => enter(profile)}
-                          className="w-full text-left transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                          <ItemMedia>
-                            <ProfileAvatar
-                              name={profile.name}
-                              className="size-10"
-                            />
-                          </ItemMedia>
-                          <ItemContent>
-                            <ItemTitle>{profile.name}</ItemTitle>
-                            <ItemDescription>
-                              Since{" "}
-                              {new Date(profile.createdAt).toLocaleDateString(
-                                undefined,
-                                {
-                                  month: "long",
-                                  year: "numeric",
-                                },
-                              )}
-                            </ItemDescription>
-                          </ItemContent>
-                          <ItemActions>
-                            <ArrowRight className="size-4 text-muted-foreground" />
-                          </ItemActions>
-                        </button>
-                      </Item>
-                    ))}
-                  </ItemGroup>
-                )
+            <CardContent className="grid gap-4">
+              {error && (
+                <Alert variant="destructive">
+                  <CircleAlert />
+                  <AlertTitle>Couldn’t sign you in</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
-              {existing.length > 0 && <FieldSeparator>or</FieldSeparator>}
-              <form onSubmit={create} className="grid gap-4">
-                <Field>
-                  <FieldLabel htmlFor="profile-name">
-                    {existing.length ? "New profile" : "Your name"}
-                  </FieldLabel>
-                  <Input
-                    id="profile-name"
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="Ada Lovelace"
-                    autoComplete="name"
-                    required
-                  />
-                  <FieldDescription>
-                    Shown in your library. Nothing leaves this device.
-                  </FieldDescription>
-                </Field>
-                <Button
-                  type="submit"
-                  disabled={busy || !name.trim()}
-                  className="h-11 rounded-full"
-                >
-                  Create profile <ArrowRight />
-                </Button>
-              </form>
+              {offline && (
+                <Alert>
+                  <WifiOff />
+                  <AlertTitle>You’re offline</AlertTitle>
+                  <AlertDescription>
+                    Connect to the internet to sign in. After that, your library
+                    opens offline too.
+                  </AlertDescription>
+                </Alert>
+              )}
+              <Button
+                asChild={google && !offline}
+                disabled={!google || offline}
+                variant="outline"
+                className="h-12 w-full rounded-full bg-background/60 text-sm"
+              >
+                {google && !offline ? (
+                  <a href="/auth/google">
+                    <GoogleIcon className="size-5" /> Continue with Google
+                  </a>
+                ) : (
+                  <>
+                    <GoogleIcon className="size-5" /> Continue with Google
+                  </>
+                )}
+              </Button>
+              {ready && !google && !offline && !error && (
+                <p className="text-center text-sm text-muted-foreground">
+                  Google sign-in isn’t set up on this server yet.
+                </p>
+              )}
             </CardContent>
+            <CardFooter>
+              <p className="text-xs leading-5 text-muted-foreground">
+                EchoFrame uses your name, email, and photo to label your
+                library. Your files are never uploaded.
+              </p>
+            </CardFooter>
           </Card>
         </div>
       </section>

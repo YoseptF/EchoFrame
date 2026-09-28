@@ -5,11 +5,11 @@ import {
   EyeOff,
   HardDrive,
   KeyRound,
+  LogOut,
   MoveUpRight,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +27,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import {
   InputGroup,
   InputGroupAddon,
@@ -36,6 +35,7 @@ import {
 } from "@/components/ui/input-group";
 import {
   Item,
+  ItemActions,
   ItemContent,
   ItemDescription,
   ItemMedia,
@@ -44,6 +44,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { checkJevKey } from "@/lib/jev";
 import { PageHeader } from "../components/app-shell";
+import { ProfileAvatar } from "../components/profile-avatar";
 import { ConfirmDialog } from "../components/confirm-dialog";
 import { fileSize } from "../format";
 import {
@@ -62,9 +63,9 @@ export function SettingsPage() {
           Settings
         </h1>
         <JevKeyCard />
-        <ProfileCard />
+        <AccountCard />
         <DeviceCard />
-        <DeleteProfileCard />
+        <ClearLibraryCard />
       </div>
     </>
   );
@@ -157,7 +158,7 @@ function JevKeyCard() {
                 </InputGroupAddon>
               </InputGroup>
               <FieldDescription>
-                Stored only in this profile on this device. During a session it
+                Stored only in your library on this device. During a session it
                 travels to TypeSafe through EchoFrame’s relay, which forwards it
                 and keeps nothing.
               </FieldDescription>
@@ -244,49 +245,44 @@ function JevKeyCard() {
   );
 }
 
-function ProfileCard() {
+function AccountCard() {
   const profile = useProfile();
-  const act = useLibraryAction();
-  const [name, setName] = useState(profile.name);
-  useEffect(() => setName(profile.name), [profile.name]);
-
-  async function save(event: FormEvent) {
-    event.preventDefault();
-    await act(
-      (library) => library.renameProfile(profile.id, name),
-      "Profile updated",
-    );
-  }
-
+  const { signOut, offline } = useLibrary();
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Profile</CardTitle>
-        <CardDescription>How you appear in this library.</CardDescription>
+        <CardTitle>Account</CardTitle>
+        <CardDescription>
+          You sign in with Google. Your name and photo come from your Google
+          account.
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <form id="profile" onSubmit={save}>
-          <Field>
-            <FieldLabel htmlFor="profile-name">Name</FieldLabel>
-            <Input
-              id="profile-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              autoComplete="name"
-              required
+        <Item variant="outline">
+          <ItemMedia>
+            <ProfileAvatar
+              name={profile.name}
+              picture={profile.picture}
+              className="size-10"
             />
-          </Field>
-        </form>
+          </ItemMedia>
+          <ItemContent>
+            <ItemTitle>{profile.name}</ItemTitle>
+            <ItemDescription>
+              {profile.email ?? "Google account"}
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions>
+            <Button
+              variant="outline"
+              disabled={offline}
+              onClick={() => signOut()}
+            >
+              <LogOut /> Sign out
+            </Button>
+          </ItemActions>
+        </Item>
       </CardContent>
-      <CardFooter className="border-t">
-        <Button
-          type="submit"
-          form="profile"
-          disabled={!name.trim() || name.trim() === profile.name}
-        >
-          Save name
-        </Button>
-      </CardFooter>
     </Card>
   );
 }
@@ -332,39 +328,35 @@ function DeviceCard() {
   );
 }
 
-function DeleteProfileCard() {
+function ClearLibraryCard() {
   const profile = useProfile();
   const { signOut } = useLibrary();
   const act = useLibraryAction();
-  const [, navigate] = useLocation();
   return (
     <Card className="border-destructive/30 xl:col-start-2">
       <CardHeader>
-        <CardTitle>Delete profile</CardTitle>
+        <CardTitle>Remove this library</CardTitle>
         <CardDescription>
-          Removes {profile.name}, every folder and asset, and the saved Jev key
-          from this device.
+          Deletes every folder and asset, and the saved Jev key, for{" "}
+          {profile.email ?? profile.name} from this device, then signs you out.
+          Your Google account is not affected.
         </CardDescription>
       </CardHeader>
       <CardFooter>
         <ConfirmDialog
-          title={`Delete ${profile.name}?`}
-          description="All folders, assets, and settings for this profile are removed from this device. This can’t be undone."
-          action="Delete profile"
+          title="Remove this library from this device?"
+          description="All folders, assets, and settings for this account are deleted from this browser. This can’t be undone."
+          action="Remove library"
           onConfirm={async () => {
-            await act(
-              (library) => library.removeProfile(profile.id),
-              "Profile deleted",
-            );
-            signOut();
-            navigate("/sign-in");
+            await act((library) => library.removeProfile(profile.id));
+            await signOut();
           }}
           trigger={
             <Button
               variant="outline"
               className="border-destructive/40 text-destructive"
             >
-              <Trash2 /> Delete profile
+              <Trash2 /> Remove library
             </Button>
           }
         />
