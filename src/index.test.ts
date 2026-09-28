@@ -1,6 +1,7 @@
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
 import worker from "./index";
 import { jevEndpoint } from "./lib/jev";
+import { signSession } from "./auth";
 import { version } from "../package.json";
 
 test("the version endpoint bypasses static assets", async () => {
@@ -41,7 +42,15 @@ test("every app address serves the app shell", async () => {
 
 afterEach(() => mock.restore());
 
-const noAssets = { ASSETS: { fetch: mock(async () => new Response()) } };
+const noAssets = {
+  ASSETS: { fetch: mock(async () => new Response()) },
+  SESSION_SECRET: "session-secret",
+};
+const signedIn = async () =>
+  `ef_session=${await signSession(
+    { id: "1", name: "Ada", email: null, picture: null },
+    "session-secret",
+  )}`;
 
 test("the Jev relay forwards the visitor's key and body to TypeSafe", async () => {
   const upstream = spyOn(globalThis, "fetch").mockResolvedValue(
@@ -55,7 +64,7 @@ test("the Jev relay forwards the visitor's key and body to TypeSafe", async () =
   const response = await worker.fetch(
     new Request("https://echoframe.yosept.me/api/jev", {
       method: "POST",
-      headers: { Authorization: "Bearer ts_key", Cookie: "secret=1" },
+      headers: { Authorization: "Bearer ts_key", Cookie: await signedIn() },
       body,
     }),
     noAssets,
@@ -79,7 +88,7 @@ test("the Jev relay passes TypeSafe errors through", async () => {
   const response = await worker.fetch(
     new Request("https://echoframe.yosept.me/api/jev", {
       method: "POST",
-      headers: { Authorization: "Bearer wrong" },
+      headers: { Authorization: "Bearer wrong", Cookie: await signedIn() },
       body: "{}",
     }),
     noAssets,
@@ -94,13 +103,26 @@ test("the Jev relay refuses requests it should not forward", async () => {
       new Request("https://echoframe.yosept.me/api/jev", init),
       noAssets,
     );
+  const cookie = await signedIn();
   expect((await relay({ method: "GET" })).status).toBe(405);
-  expect((await relay({ method: "POST", body: "{}" })).status).toBe(401);
   expect(
     (
       await relay({
         method: "POST",
         headers: { Authorization: "Bearer k" },
+        body: "{}",
+      })
+    ).status,
+  ).toBe(403);
+  expect(
+    (await relay({ method: "POST", headers: { Cookie: cookie }, body: "{}" }))
+      .status,
+  ).toBe(401);
+  expect(
+    (
+      await relay({
+        method: "POST",
+        headers: { Authorization: "Bearer k", Cookie: cookie },
         body: "x".repeat(512 * 1024 + 1),
       })
     ).status,

@@ -39,6 +39,7 @@ export class JevError extends Error {
 
 const messages: Record<number, string> = {
   401: "Jev didn’t accept this key. Check it in the TypeSafe console.",
+  403: "Your session ended. Sign in again to use Jev.",
   422: "Jev couldn’t read the request.",
   429: "Your Jev rate limit was reached. Try again in a moment.",
   529: "Jev is busy right now. Try again in a moment.",

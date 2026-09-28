@@ -1,0 +1,13 @@
+# Copy to .dev.vars for local development. Production and staging values are wrangler secrets.
+# Google OAuth client (Web application). Leave blank to show sign-in as unavailable.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+# Signs session cookies. 32 random bytes, base64url:
+# openssl rand 32 | base64 | tr '+/' '-_' | tr -d '=\n'
+SESSION_SECRET=
+# Local only: wrangler dev reports the production host, so name the real origin.
+APP_ORIGIN=http://localhost:8787
+# Optional fake OpenID endpoints for local sign-in tests.
+# GOOGLE_AUTH_URL=http://localhost:9997/auth
+# GOOGLE_TOKEN_URL=http://localhost:9997/token
+# GOOGLE_USERINFO_URL=http://localhost:9997/userinfo
