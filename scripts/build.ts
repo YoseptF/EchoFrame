@@ -9,7 +9,10 @@ await Promise.all(
   ),
 );
 const result = await Bun.build({
-  entrypoints: ["src/index.html"],
+  entrypoints: ["src/index.html", "src/app/index.html"],
+  // Absolute asset URLs let /app deep links load the same bundle.
+  publicPath: "/",
+  splitting: true,
   outdir: "dist",
   target: "browser",
   minify: true,
@@ -19,4 +22,6 @@ const result = await Bun.build({
 if (!result.success)
   throw new AggregateError(result.logs, "Frontend build failed");
 await cp("public", "dist", { recursive: true });
-console.log(`Built landing page (${result.outputs.length} bundled assets).`);
+console.log(
+  `Built the landing page and app (${result.outputs.length} bundled assets).`,
+);

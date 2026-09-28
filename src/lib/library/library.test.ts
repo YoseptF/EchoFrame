@@ -3,6 +3,7 @@ import {
   Library,
   assetKind,
   defaultEchoConfig,
+  needsDescription,
   normalizeConfig,
   normalizeTags,
 } from "./library";
@@ -159,4 +160,7 @@ test("helpers classify files and clean tags", () => {
   expect(assetKind({ type: "", name: "Talk.MD" })).toBe("text");
   expect(assetKind({ type: "video/mp4", name: "a.mp4" })).toBeNull();
   expect(normalizeTags(["", " A  B ", "a b"])).toEqual(["a b"]);
+  expect(needsDescription({ kind: "image", description: " " })).toBe(true);
+  expect(needsDescription({ kind: "audio", description: "Rain" })).toBe(false);
+  expect(needsDescription({ kind: "text", description: "" })).toBe(false);
 });

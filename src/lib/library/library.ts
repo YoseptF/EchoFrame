@@ -77,6 +77,11 @@ export function assetKind(file: { type: string; name: string }) {
   return null;
 }
 
+/** Media needs words before Jev can match it; a text asset speaks for itself. */
+export function needsDescription(asset: Pick<Asset, "kind" | "description">) {
+  return asset.kind !== "text" && !asset.description.trim();
+}
+
 export function normalizeTags(tags: Iterable<string>) {
   const unique = new Set<string>();
   for (const tag of tags) {
