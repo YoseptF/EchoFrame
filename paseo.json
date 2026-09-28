@@ -1,0 +1,39 @@
+{
+  "worktree": {
+    "setup": [
+      "bun install",
+      "# dev secrets are gitignored; copy them from the main checkout, wherever this worktree lives",
+      "cp \"$(git rev-parse --git-common-dir)/../.dev.vars\" .dev.vars 2>/dev/null || cp .dev.vars.example .dev.vars"
+    ],
+    "teardown": "pkill -f \"wrangler dev\" 2>/dev/null || true"
+  },
+  "scripts": {
+    "dev": {
+      "type": "script",
+      "command": "bunx wrangler dev --port 8787"
+    },
+    "test": {
+      "type": "script",
+      "command": "bun test"
+    },
+    "typecheck": {
+      "type": "script",
+      "command": "bun run typecheck"
+    },
+    "check-changeset": {
+      "type": "script",
+      "command": "bun run check:changeset"
+    }
+  },
+  "metadataGeneration": {
+    "branchName": {
+      "instructions": "Branch from release, never from main. Short kebab-case describing the change, no type prefix: app-foundation, jev-live-session, folder-export."
+    },
+    "commitMessage": {
+      "instructions": "One line, plain natural language, saying what the commit does. No conventional-commit prefixes, no body, no trailers, no tool or AI attribution of any kind. Commit small and often."
+    },
+    "pullRequest": {
+      "instructions": "Base branch is always release. Title is one plain sentence. Body: one paragraph on what changed and why, one line saying which changeset was added (or why none: tests, tooling, refactor only), and how it was verified. No attribution or generated-by lines."
+    }
+  }
+}

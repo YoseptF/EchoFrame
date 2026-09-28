@@ -48,8 +48,8 @@ large stage. The shader caps its resolution and draw rate, stops offscreen or in
 falls back to a static gradient when WebGL is unavailable or its context is lost.
 
 Live-session messaging explicitly requires the visitor's own Jev API key. The **Launch EchoFrame**
-buttons intentionally have no action until the login flow is added. No credentials are collected,
-no microphone is accessed, and no Jev calls are made by this page. Official links point to
+buttons open the app at `/app`. The landing page itself collects no credentials, accesses no
+microphone, and makes no Jev calls. Official links point to
 [TypeSafe's key dashboard](https://console.typesafe.ai/keys) and
 [Jev's quickstart](https://docs.typesafe.ai/introduction/quickstart).
 
@@ -57,6 +57,48 @@ Mode and scene content lives in `src/lib/presentation.ts`; renderers live in
 `src/components/presentation-stage.tsx`. The forest/water-cycle example links its scientific
 reference to USGS Water Science. UI components can be added with
 `bunx shadcn add <component>`. Photo sources are listed in `public/images/README.md`.
+
+## The app
+
+`/app` is a second Bun HTML entry (`src/app/index.html`) sharing chunks with the landing page. The
+Worker serves the app shell for every `/app/*` address so deep links work; routing is client-side
+with `wouter`.
+
+The app is local-first. There is no database:
+
+- **Sign-in** is Google. The Worker runs the OAuth code flow (`src/auth.ts`) and keeps the result
+  in a signed, HttpOnly session cookie; `/api/session` reports who is signed in. Each Google
+  account gets its own library on the device, and the last account is cached so the library still
+  opens offline.
+- **Storage** is the browser's Origin Private File System, laid out as real folders and files
+  (`src/lib/library/library.ts` documents the layout). `FileStore` in `src/lib/library/store.ts`
+  is the seam an installed app can implement against the real disk; tests use the in-memory store.
+- **Folders** hold image, audio, and text assets. Each asset has a description and tags; Jev
+  matches speech against words, so media without a description is flagged.
+- **Echo settings** per folder: starting mode, speech window, minimum hold, the relevance,
+  recency and continuity weights, and the speech language.
+- **Jev** calls go to `POST /api/jev`. TypeSafe does not accept browser origins, so the Worker
+  forwards the request with the user's own key and stores nothing. Only signed-in sessions can
+  use the relay. Settings checks a key with one small request before saving it.
+
+### Google sign-in setup
+
+Create an OAuth client of type **Web application** in the Google Cloud console with these
+authorized redirect URIs:
+
+- `https://echoframe.yosept.me/auth/google/callback`
+- `https://echoframe-staging.yosept.me/auth/google/callback`
+- `http://localhost:8787/auth/google/callback`
+
+Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `SESSION_SECRET` as Worker secrets for
+production and staging (`bunx wrangler secret put <NAME>` and `--env staging`). Locally, copy
+`.dev.vars.example` to `.dev.vars`; `APP_ORIGIN` is needed there because `wrangler dev` reports
+the production host. Without the Google values, sign-in shows as unavailable. PR preview URLs
+can't be registered with Google, so sign-in works on staging and production, not on previews.
+
+`/privacy` and `/terms` (`src/components/legal.tsx`) are rendered to static HTML during the build.
+Google requires the privacy policy URL before the OAuth app can be published. Keep both pages true
+to what the code does when data handling changes.
 
 ## How changes ship
 

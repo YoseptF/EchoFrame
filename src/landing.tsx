@@ -36,12 +36,12 @@ import {
 } from "@/components/effects/motion-system";
 import { ScrollModeTour } from "@/components/scroll-mode-tour";
 import { PresentationStage } from "@/components/presentation-stage";
+import { Brand } from "@/components/brand";
 
-// The login flow will be connected here. Deliberately inert for this landing-page PR.
 function LaunchButton({ compact = false }: { compact?: boolean }) {
   return (
     <Button
-      type="button"
+      asChild
       variant={compact ? "outline" : "default"}
       className={
         compact
@@ -49,22 +49,10 @@ function LaunchButton({ compact = false }: { compact?: boolean }) {
           : "h-12 rounded-full px-6 text-xs shadow-[0_0_30px_#caff851c] transition-transform hover:scale-[1.035] active:scale-[.98]"
       }
     >
-      Launch EchoFrame <ArrowRight className="ml-2 size-4" />
+      <a href="/app">
+        Launch EchoFrame <ArrowRight className="ml-2 size-4" />
+      </a>
     </Button>
-  );
-}
-
-function Brand() {
-  return (
-    <span className="flex items-center gap-2.5">
-      <AudioLines
-        className="size-6 text-primary max-[380px]:hidden"
-        strokeWidth={2.5}
-      />
-      <span className="text-xl font-semibold tracking-[-0.07em]">
-        echoframe<span className="text-primary">.</span>
-      </span>
-    </span>
   );
 }
 
@@ -617,7 +605,15 @@ export function App() {
           </div>
           <Separator className="my-6" />
           <div className="flex items-center justify-between gap-4 text-[10px] text-muted-foreground">
-            <span>© {new Date().getFullYear()} EchoFrame</span>
+            <span className="flex flex-wrap gap-x-4 gap-y-1">
+              <span>© {new Date().getFullYear()} EchoFrame</span>
+              <a href="/privacy" className="hover:text-foreground">
+                Privacy
+              </a>
+              <a href="/terms" className="hover:text-foreground">
+                Terms
+              </a>
+            </span>
             <span>
               v{version} <span className="mx-2 text-white/20">/</span>{" "}
               Voice-driven visual storytelling

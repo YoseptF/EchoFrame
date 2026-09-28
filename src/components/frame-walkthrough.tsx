@@ -5,12 +5,9 @@ import {
   ArrowLeft,
   ArrowRight,
   AudioLines,
-  Image,
-  Layers3,
   Maximize2,
   Pause,
   Play,
-  Presentation,
   RotateCcw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PresentationStage } from "@/components/presentation-stage";
+import { modeIcons } from "@/components/mode-icons";
 import { cn } from "@/lib/utils";
 import {
   modes,
@@ -33,12 +31,6 @@ import {
   scienceSource,
   type FrameMode,
 } from "@/lib/presentation";
-
-const modeIcons = {
-  presentation: Presentation,
-  backdrop: Image,
-  spatial: Layers3,
-};
 
 export function FrameWalkthrough() {
   const [mode, setMode] = useState<FrameMode>("spatial");
