@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [release, main]
+  push:
+    branches: [release, main]
+
+jobs:
+  checks:
+    name: Typecheck and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run test
+
+  changeset:
+    name: Changeset present, launch rules kept
+    # Not on the sync PR from main: the version commit changes package.json and consumes changesets.
+    if: github.event_name == 'pull_request' && github.base_ref == 'release' && github.head_ref != 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bash scripts/check-changeset.sh
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      - run: bun scripts/launch.ts check
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+  launch-gate:
+    name: Launch gate
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun scripts/launch.ts gate
+
+  release-preview:
+    name: What this merge releases
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bash scripts/release-preview.sh > tmp-release-preview.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs')
+            const marker = '<!-- release-preview -->'
+            const body = `${marker}\n## Merging this releases\n\n${fs.readFileSync('tmp-release-preview.md', 'utf8')}`
+            const { owner, repo } = context.repo
+            const issue_number = context.issue.number
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number })
+            const mine = comments.find((c) => c.body && c.body.startsWith(marker))
+            if (mine) await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body })
+            else await github.rest.issues.createComment({ owner, repo, issue_number, body })

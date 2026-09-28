@@ -1,10 +1,25 @@
 {
   "name": "echoframe",
-  "module": "index.ts",
+  "version": "0.0.0",
+  "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test --pass-with-no-tests",
+    "changeset": "changeset",
+    "version-packages": "changeset version && bun install --no-frozen-lockfile",
+    "release": "changeset tag",
+    "check:changeset": "bash scripts/check-changeset.sh",
+    "launch": "bun scripts/launch.ts"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
+    "@types/bun": "latest",
+    "wrangler": "^4.143.0"
   },
   "peerDependencies": {
     "typescript": "^7"

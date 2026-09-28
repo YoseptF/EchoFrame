@@ -1,0 +1,75 @@
+name: Production
+
+# Every merge into `main` is a release. If the armed launch is past its cooldown it becomes a major
+# changeset; then the pending changesets become one version bump and one changelog entry, committed
+# to main and fast-forwarded to release, the Worker is deployed to echoframe.yosept.me, the version
+# is tagged and the GitHub release written from the changelog.
+on:
+  push:
+    branches: [main]
+
+concurrency: production
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Deploy and release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+
+      - name: Git identity for the version commit and the tags
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Refuse breaking changes without a ready launch
+        run: bun scripts/launch.ts gate
+      - name: Turn a ready launch into its major changeset
+        id: launch
+        run: bun scripts/launch.ts apply
+      - name: Turn the pending changesets into a version and a changelog
+        run: |
+          bun run version-packages
+          if git status --porcelain | grep -q .; then
+            git add .changeset package.json bun.lock
+            [ -f CHANGELOG.md ] && git add CHANGELOG.md
+            git commit -m "Version packages"
+            git push origin HEAD:main
+            # release must contain the version commit too, or the next release PR conflicts.
+            if ! git push origin HEAD:release; then
+              echo "::warning::release moved since this PR was opened; opening a sync PR instead"
+              gh pr create --base release --head main --title "Sync the version commit into release" \
+                --body "release changed after the release PR was opened, so the version commit could not be fast-forwarded. Merge this before the next release." || true
+            fi
+          else
+            echo "no pending changesets, no version bump"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy the Worker
+        run: bunx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Tag the version
+        run: bun run release
+      - name: Push tags
+        run: git push --tags
+      - name: GitHub release from the changelog
+        run: bash scripts/github-releases.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Launch posts
+        if: steps.launch.outputs.version
+        run: bun scripts/launch.ts posts "${{ steps.launch.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
