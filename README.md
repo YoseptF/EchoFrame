@@ -64,9 +64,12 @@ reference to USGS Water Science. UI components can be added with
 Worker serves the app shell for every `/app/*` address so deep links work; routing is client-side
 with `wouter`.
 
-The app is local-first. There is no database or account server:
+The app is local-first. There is no database:
 
-- **Profiles** are the sign-in. Each profile on a device keeps its own folders and Jev key.
+- **Sign-in** is Google. The Worker runs the OAuth code flow (`src/auth.ts`) and keeps the result
+  in a signed, HttpOnly session cookie; `/api/session` reports who is signed in. Each Google
+  account gets its own library on the device, and the last account is cached so the library still
+  opens offline.
 - **Storage** is the browser's Origin Private File System, laid out as real folders and files
   (`src/lib/library/library.ts` documents the layout). `FileStore` in `src/lib/library/store.ts`
   is the seam an installed app can implement against the real disk; tests use the in-memory store.
@@ -75,8 +78,23 @@ The app is local-first. There is no database or account server:
 - **Echo settings** per folder: starting mode, speech window, minimum hold, the relevance,
   recency and continuity weights, and the speech language.
 - **Jev** calls go to `POST /api/jev`. TypeSafe does not accept browser origins, so the Worker
-  forwards the request with the user's own key and stores nothing. Settings checks a key with one
-  small request before saving it.
+  forwards the request with the user's own key and stores nothing. Only signed-in sessions can
+  use the relay. Settings checks a key with one small request before saving it.
+
+### Google sign-in setup
+
+Create an OAuth client of type **Web application** in the Google Cloud console with these
+authorized redirect URIs:
+
+- `https://echoframe.yosept.me/auth/google/callback`
+- `https://echoframe-staging.yosept.me/auth/google/callback`
+- `http://localhost:8787/auth/google/callback`
+
+Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `SESSION_SECRET` as Worker secrets for
+production and staging (`bunx wrangler secret put <NAME>` and `--env staging`). Locally, copy
+`.dev.vars.example` to `.dev.vars`; `APP_ORIGIN` is needed there because `wrangler dev` reports
+the production host. Without the Google values, sign-in shows as unavailable. PR preview URLs
+can't be registered with Google, so sign-in works on staging and production, not on previews.
 
 ## How changes ship
 

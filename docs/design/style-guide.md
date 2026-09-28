@@ -264,8 +264,9 @@ surface: quieter, denser, and built entirely from `src/components/ui/`. The sign
 `AuroraField` (it must sit inside a `<section>`, which the shader uses for pointer tracking);
 signed-in pages do not run ambient effects.
 
-- **Local first, and say so.** Profiles, folders, and assets live in the browser's private file
-  system. Copy should say the library stays on this device; never imply cloud sync or accounts.
+- **Local first, and say so.** Sign-in is Google, but folders and assets live in the browser's
+  private file system. Copy may say files stay on this device; never imply cloud sync or backup.
+  Say it once where it matters, not as a slogan on every screen.
 - **Words drive matching.** Jev reads descriptions and tags, not pixels. Keep the "needs a
   description" prompts visible for media, and never imply Jev sees images.
 - **Keys stay the user's.** The Jev key is stored in the profile and sent only through the
