@@ -1,6 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import {
-  ArrowRight,
   AudioLines,
   Check,
   Maximize2,
@@ -20,7 +19,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -28,7 +26,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { matchStory, stories, type Story } from "@/lib/stories";
+import { stories, type Story } from "@/lib/stories";
 
 function Mosaic({
   story,
@@ -45,7 +43,9 @@ function Mosaic({
     <div
       className={cn(
         "grid grid-cols-[1.55fr_1fr] grid-rows-2 gap-2 overflow-hidden rounded-lg",
-        expanded ? "h-[60vh]" : "h-[280px] sm:h-[390px] lg:h-[470px]",
+        expanded
+          ? "h-[60vh]"
+          : "h-[340px] sm:h-[520px] lg:h-[clamp(380px,37vw,760px)]",
       )}
       aria-label={`${story.name} visual mosaic`}
     >
@@ -100,23 +100,13 @@ function Mosaic({
   );
 }
 
-export function MosaicDemo({ startSignal }: { startSignal: number }) {
+export function MosaicDemo() {
   const [storyId, setStoryId] = useState("wild");
   const [sceneIndex, setSceneIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [input, setInput] = useState("");
-  const [customText, setCustomText] = useState("");
-  const [feedback, setFeedback] = useState("");
   const story = stories.find((item) => item.id === storyId)!;
   const scene = story.scenes[sceneIndex]!;
 
-  useEffect(() => {
-    if (startSignal > 0) {
-      setPlaying(true);
-      setCustomText("");
-      setFeedback("");
-    }
-  }, [startSignal]);
   useEffect(() => {
     if (!playing) return;
     const timer = window.setInterval(
@@ -137,56 +127,36 @@ export function MosaicDemo({ startSignal }: { startSignal: number }) {
   function selectStory(id: string) {
     setStoryId(id);
     setSceneIndex(0);
-    setCustomText("");
-    setFeedback("");
-  }
-  function submitLine(event: FormEvent) {
-    event.preventDefault();
-    setPlaying(false);
-    const match = matchStory(input);
-    if (!match) {
-      setFeedback(
-        "No match in this sample library yet. Try forest, mountains, city, or space.",
-      );
-      return;
-    }
-    setStoryId(match.story.id);
-    setSceneIndex(match.sceneIndex);
-    setCustomText(input.trim());
-    setFeedback(
-      `Found a match in ${match.story.name}. Your line stays in this browser.`,
-    );
   }
 
   return (
     <section
-      id="demo"
-      aria-label="Interactive concept demo"
-      className="relative mx-auto max-w-6xl scroll-mt-8 px-5 sm:px-8"
+      id="frame"
+      aria-label="Illustrated frame walkthrough"
+      className="min-w-0"
     >
-      <div className="pointer-events-none absolute -inset-x-6 top-14 -z-10 h-96 rounded-full bg-primary/5 blur-[90px]" />
       <div className="mb-4 flex items-center justify-between gap-3 text-[10px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
         <span className="flex items-center gap-2">
-          <span className="size-1.5 rounded-full bg-primary" /> A glimpse of
-          what’s possible
+          <span className="size-1.5 rounded-full bg-primary" /> The frame
+          follows the thought
         </span>
-        <span className="hidden sm:block">Your story, taking shape</span>
+        <span className="hidden sm:block">FRAME / 001</span>
       </div>
-      <Card className="gap-0 overflow-hidden rounded-2xl border-white/15 bg-[#181d19] py-0 shadow-2xl shadow-black/40">
+      <Card className="gap-0 overflow-hidden rounded-lg border-white/15 bg-[#181d19] py-0 shadow-2xl shadow-black/40">
         <Tabs value={storyId} onValueChange={selectStory} className="gap-0">
-          <div className="flex flex-col gap-3 border-b px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="flex flex-col gap-3 border-b px-3 py-3 2xl:flex-row 2xl:items-center 2xl:justify-between sm:px-5">
             <div className="flex items-center gap-2 text-xs font-semibold">
-              <AudioLines className="size-4 text-primary" /> The story room{" "}
+              <AudioLines className="size-4 text-primary" /> An echoframe{" "}
               <Badge
                 variant="outline"
                 className="ml-1 rounded-sm text-[9px] font-normal text-muted-foreground"
               >
-                CONCEPT
+                WALKTHROUGH
               </Badge>
             </div>
             <TabsList
               aria-label="Choose a sample story"
-              className="w-full bg-black/20 sm:w-auto"
+              className="w-full bg-black/20 2xl:w-auto"
             >
               {stories.map((item) => (
                 <TabsTrigger
@@ -218,7 +188,7 @@ export function MosaicDemo({ startSignal }: { startSignal: number }) {
               )}
             />
             <span className="text-[9px] tracking-[0.14em] text-muted-foreground uppercase">
-              {customText ? "Your line" : "Sample narration"}
+              Example transcript
             </span>
           </div>
           <div
@@ -226,7 +196,7 @@ export function MosaicDemo({ startSignal }: { startSignal: number }) {
             aria-live={playing ? "off" : "polite"}
           >
             <p className="min-h-14 text-sm leading-relaxed text-foreground/90 sm:text-base">
-              “{customText || scene.text}”
+              “{scene.text}”
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <Sparkles className="mr-1 size-3 text-primary" />
@@ -248,27 +218,23 @@ export function MosaicDemo({ startSignal }: { startSignal: number }) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label="Restart story"
+                    aria-label="Restart walkthrough"
                     onClick={() => {
                       setSceneIndex(0);
-                      setCustomText("");
-                      setFeedback("");
                       setPlaying(false);
                     }}
                   >
                     <RotateCcw className="size-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Restart story</TooltipContent>
+                <TooltipContent>Restart walkthrough</TooltipContent>
               </Tooltip>
               <Button
                 size="icon"
                 className="rounded-full"
-                aria-label={playing ? "Pause story" : "Play story"}
+                aria-label={playing ? "Pause walkthrough" : "Play walkthrough"}
                 onClick={() => {
                   setPlaying(!playing);
-                  setCustomText("");
-                  setFeedback("");
                 }}
               >
                 {playing ? (
@@ -296,17 +262,17 @@ export function MosaicDemo({ startSignal }: { startSignal: number }) {
                   </TooltipTrigger>
                   <TooltipContent>Expand mosaic</TooltipContent>
                 </Tooltip>
-                <DialogContent className="w-[calc(100%-2rem)] max-w-6xl bg-background sm:max-w-6xl">
+                <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-6xl overflow-y-auto bg-background sm:max-w-6xl">
                   <DialogHeader>
                     <DialogTitle>{story.name}</DialogTitle>
                     <DialogDescription>
-                      A concept of your presentation backdrop. Sample imagery,
-                      selected from a local library.
+                      An illustrated frame sequence using example assets and a
+                      sample transcript.
                     </DialogDescription>
                   </DialogHeader>
                   <Mosaic story={story} sceneIndex={sceneIndex} expanded />
                   <p className="text-sm text-muted-foreground">
-                    “{customText || scene.text}”
+                    “{scene.text}”
                   </p>
                 </DialogContent>
               </Dialog>
@@ -325,48 +291,27 @@ export function MosaicDemo({ startSignal }: { startSignal: number }) {
               )}
             />
             {playing
-              ? "Playing scripted preview"
-              : "Scripted preview · press play to explore"}
+              ? "Playing walkthrough"
+              : "Illustrated sequence · press play"}
           </span>
           <span className="hidden sm:inline">
-            No microphone. Just imagination.
+            Recent context → matching assets → composition
           </span>
         </div>
       </Card>
-      <form onSubmit={submitLine} className="mx-auto mt-6 max-w-xl">
-        <label
-          htmlFor="story-line"
-          className="mb-2 block text-center text-xs text-muted-foreground"
-        >
-          Or give the sample library a line of your own
-        </label>
-        <div className="flex gap-2">
-          <Input
-            id="story-line"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            maxLength={240}
-            placeholder="The forest gives way to mountains…"
-            className="h-11 border-white/15 bg-card/50 text-sm"
-          />
-          <Button
-            type="submit"
-            variant="secondary"
-            className="h-11 px-4"
-            disabled={!input.trim()}
-            aria-label="Find visuals for your line"
-          >
-            <ArrowRight className="size-4" />
-          </Button>
-        </div>
-        <p
-          role="status"
-          className="mt-2 min-h-8 text-center text-[11px] leading-relaxed text-muted-foreground"
-        >
-          {feedback ||
-            "This concept uses sample images and keyword matching. The voice-driven app is still ahead."}
+      <div className="mt-5 grid gap-4 border-t border-white/10 pt-5 sm:grid-cols-[1fr_auto]">
+        <p className="text-xs leading-6 text-muted-foreground">
+          An example of a changing frame. Select a story and follow its
+          transcript through the composition.
         </p>
-      </form>
+        <Button
+          asChild
+          variant="link"
+          className="h-auto justify-start self-start p-0 text-xs text-primary"
+        >
+          <a href="#session">Live demo: Jev key required ↗</a>
+        </Button>
+      </div>
     </section>
   );
 }

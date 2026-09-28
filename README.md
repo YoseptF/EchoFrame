@@ -29,10 +29,18 @@ photographs. `bun run dev` builds the frontend and serves it through Wrangler; e
 plugin. Wrangler runs that build automatically for previews and deployments, then serves the
 output through Workers Static Assets. `/version` continues to return the running package version.
 
-The interactive concept has three scripted stories, play/pause/reset controls, an expanded mosaic,
-and local keyword matching for a typed line. It does not record audio, call an AI API, upload text,
-or persist input. Story content and sample tags live in `src/lib/stories.ts`; UI components can be
-added with `bunx shadcn add <component>`. Photo sources are listed in `public/images/README.md`.
+The landing page explains the product through a full-width layout, an illustrated frame walkthrough,
+and interactive examples of relevance, recency, and continuity heuristics. The walkthrough uses
+scripted transcripts and bundled images; it is separate from live presentation sessions.
+
+Live-session messaging explicitly requires the visitor's own Jev API key. The **Launch EchoFrame**
+buttons intentionally have no action until the login flow is added. No credentials are collected,
+no microphone is accessed, and no Jev calls are made by this page. Official links point to
+[TypeSafe's key dashboard](https://console.typesafe.ai/keys) and
+[Jev's quickstart](https://docs.typesafe.ai/introduction/quickstart).
+
+Story content lives in `src/lib/stories.ts`; UI components can be added with
+`bunx shadcn add <component>`. Photo sources are listed in `public/images/README.md`.
 
 ## How changes ship
 

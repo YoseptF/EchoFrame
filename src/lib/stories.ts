@@ -125,17 +125,3 @@ export const stories: Story[] = [
     ],
   },
 ];
-
-// This preview deliberately uses local keyword matching, not a live AI service.
-export function matchStory(text: string) {
-  const words = new Set(text.toLowerCase().match(/[a-z]+/g) ?? []);
-  let best: { story: Story; sceneIndex: number; score: number } | undefined;
-  for (const story of stories) {
-    story.scenes.forEach((scene, sceneIndex) => {
-      const score = scene.tags.filter((tag) => words.has(tag)).length;
-      if (score > 0 && (!best || score > best.score))
-        best = { story, sceneIndex, score };
-    });
-  }
-  return best;
-}
