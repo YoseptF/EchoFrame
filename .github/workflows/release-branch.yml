@@ -1,0 +1,26 @@
+name: Release branch
+
+# Every merge into `release` deploys staging. Versions are computed when release merges into main.
+on:
+  push:
+    branches: [release]
+
+concurrency: release-branch
+
+permissions:
+  contents: read
+
+jobs:
+  staging:
+    name: Deploy staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Deploy
+        run: bunx wrangler deploy --env staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
