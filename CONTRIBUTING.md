@@ -2,10 +2,10 @@
 
 Two locked branches. Everything else is a short-lived branch.
 
-| Branch | Is | Gets changes from |
-|---|---|---|
-| `release` | staging, the next release in the making | pull requests from feature branches |
-| `main` | production | one pull request from `release` |
+| Branch | Is | Gets changes from | Deploys to |
+|---|---|---|---|
+| `release` | staging, the next release in the making | pull requests from feature branches | echoframe-staging.yosept.me |
+| `main` | production | one pull request from `release` | echoframe.yosept.me |
 
 ## Day to day
 
@@ -15,8 +15,14 @@ Two locked branches. Everything else is a short-lived branch.
    Several commits share one changeset. Refactors, tests and tooling need none.
    Code changed but nothing to tell users? `bun run changeset --empty`. That is recorded too.
 3. Open a PR into `release`. CI runs typecheck and tests, refuses the PR if source changed without
-   a changeset, and refuses any `major` changeset unless a launch is armed. Merge when green.
-   Merging means "this ships next".
+   a changeset, and refuses any `major` changeset unless a launch is armed. It also comments a
+   preview URL on the PR (see below). Merge when green. Merging means "this ships next".
+
+## Preview URLs
+
+Every PR into `release` gets `https://pr-<n>-echoframe-staging.yosept-flores.workers.dev`, updated
+on every push. It is a version of the staging Worker under a `pr-<n>` alias, nothing is deployed.
+Production never has version URLs; `preview_urls` is on for staging only.
 
 ## Bump rules
 
@@ -50,7 +56,7 @@ it last changed. The full rules are in [launches/README.md](launches/README.md).
 
 ## Releasing
 
-Every merge into `release` is staged. Nothing is versioned yet: the changesets pile up in
+Every merge into `release` deploys staging. Nothing is versioned yet: the changesets pile up in
 `.changeset/` until you ship.
 
 1. Open `release` → `main`. CI comments on the PR what the merge will release: the new version,
@@ -58,13 +64,13 @@ Every merge into `release` is staged. Nothing is versioned yet: the changesets p
    waiting on a launch that is still cooling down.
 2. Merge it. Actions turns a ready launch into its major changeset, turns the pending changesets
    into one version bump and one changelog entry, commits "Version packages" to `main` and
-   fast-forwards `release` to match. Then it tags `v<x.y.z>` and creates the GitHub release from
-   the changelog. On a launch it also prints the posts in the workflow summary.
+   fast-forwards `release` to match. Then it deploys the Worker to echoframe.yosept.me, tags
+   `v<x.y.z>` and creates the GitHub release from the changelog. On a launch it also prints the posts in the workflow summary.
 
 One bump per production release, so version numbers only move when something actually ships.
-Nobody chooses a version number and nobody releases from a laptop.
+Nobody chooses a version number and nobody deploys from a laptop.
 
-If `release` moved between opening the PR and the release, the fast-forward is refused and Actions
+If `release` moved between opening the PR and the deploy, the fast-forward is refused and Actions
 opens a "Sync the version commit into release" PR instead. Merge it before the next release.
 
 ## Commit messages

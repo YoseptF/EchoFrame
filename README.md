@@ -6,10 +6,11 @@ To install dependencies:
 bun install
 ```
 
-To run:
+echoframe is a Cloudflare Worker: https://echoframe.yosept.me (staging:
+https://echoframe-staging.yosept.me). To run it locally:
 
 ```bash
-bun run index.ts
+bun run dev
 ```
 
 Checks:
