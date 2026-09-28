@@ -36,6 +36,13 @@ switches preserve the current thought. Playback advances through three scenes an
 direct jumps between thoughts, previous/next, restart, and expanded-stage controls also work without playback. Spatial has a compact
 layout for narrow containers. The walkthrough is separate from live presentation sessions.
 
+The landing page also includes a pointer- and scroll-reactive WebGL field, scroll-linked typography,
+a sticky desktop mode tour, and Motion transitions around the shadcn components. The hero walkthrough
+plays once when it first enters view. A header control pauses visual effects; reduced-motion visitors
+get static effects and no autoplay. Small screens show the mode examples inline instead of pinning a
+large stage. The shader caps its resolution and draw rate, stops offscreen or in a hidden tab, and
+falls back to a static gradient when WebGL is unavailable or its context is lost.
+
 Live-session messaging explicitly requires the visitor's own Jev API key. The **Launch EchoFrame**
 buttons intentionally have no action until the login flow is added. No credentials are collected,
 no microphone is accessed, and no Jev calls are made by this page. Official links point to

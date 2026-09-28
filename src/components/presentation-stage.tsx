@@ -1,3 +1,5 @@
+import { AnimatePresence, motion } from "motion/react";
+import { useActiveMotion } from "@/components/effects/motion-system";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -10,6 +12,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { scenes, type FrameMode, type FrameScene } from "@/lib/presentation";
+
+const MotionCard = motion.create(Card);
 
 function WaterPath({
   vertical = false,
@@ -74,7 +78,15 @@ function WaterPath({
   );
 }
 
-function Presentation({ scene, index }: { scene: FrameScene; index: number }) {
+function Presentation({
+  scene,
+  index,
+  active,
+}: {
+  scene: FrameScene;
+  index: number;
+  active: boolean;
+}) {
   return (
     <div
       className="relative flex h-full flex-col overflow-hidden bg-[#101110] text-[#f4f3ec]"
@@ -82,7 +94,14 @@ function Presentation({ scene, index }: { scene: FrameScene; index: number }) {
     >
       {index !== 1 && (
         <>
-          <img
+          <motion.img
+            animate={active ? { scale: [1, 1.055] } : { scale: 1 }}
+            transition={{
+              duration: active ? 16 : 0,
+              repeat: active ? Infinity : 0,
+              repeatType: "reverse",
+              ease: "linear",
+            }}
             src={`/images/${scene.image}.webp`}
             alt={scene.alt}
             className={cn(
@@ -170,13 +189,20 @@ function Presentation({ scene, index }: { scene: FrameScene; index: number }) {
   );
 }
 
-function Backdrop({ scene }: { scene: FrameScene }) {
+function Backdrop({ scene, active }: { scene: FrameScene; active: boolean }) {
   return (
     <div
       className="relative h-full overflow-hidden bg-[#101110]"
       data-renderer="backdrop"
     >
-      <img
+      <motion.img
+        animate={active ? { scale: [1, 1.055] } : { scale: 1 }}
+        transition={{
+          duration: active ? 16 : 0,
+          repeat: active ? Infinity : 0,
+          repeatType: "reverse",
+          ease: "linear",
+        }}
         src={`/images/${scene.image}.webp`}
         alt={scene.alt}
         className="h-full w-full object-cover"
@@ -256,7 +282,15 @@ function SpatialCompact({
   );
 }
 
-function Spatial({ scene, index }: { scene: FrameScene; index: number }) {
+function Spatial({
+  scene,
+  index,
+  active,
+}: {
+  scene: FrameScene;
+  index: number;
+  active: boolean;
+}) {
   const mechanism = index === 1;
   return (
     <>
@@ -291,7 +325,10 @@ function Spatial({ scene, index }: { scene: FrameScene; index: number }) {
           preserveAspectRatio="none"
           aria-hidden="true"
         >
-          <path
+          <motion.path
+            initial={active ? { pathLength: 0 } : false}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.2, ease: "easeInOut" }}
             d={
               mechanism
                 ? "M 420 285 H 470 V 350 H 515 M 710 458 V 510 H 425"
@@ -301,13 +338,33 @@ function Spatial({ scene, index }: { scene: FrameScene; index: number }) {
             stroke="currentColor"
             strokeWidth="1.4"
           />
-          <circle
+          <motion.circle
+            animate={
+              active
+                ? { opacity: [0.4, 1, 0.4], r: [3, 6, 3] }
+                : { opacity: 0.6, r: 4 }
+            }
+            transition={{
+              duration: active ? 3 : 0,
+              repeat: active ? Infinity : 0,
+              ease: "easeInOut",
+            }}
             cx={mechanism ? 420 : 570}
             cy="285"
             r="4"
             fill="currentColor"
           />
-          <circle
+          <motion.circle
+            animate={
+              active
+                ? { opacity: [0.4, 1, 0.4], r: [3, 6, 3] }
+                : { opacity: 0.6, r: 4 }
+            }
+            transition={{
+              duration: active ? 3 : 0,
+              repeat: active ? Infinity : 0,
+              ease: "easeInOut",
+            }}
             cx={mechanism ? 710 : 570}
             cy={mechanism ? 458 : 400}
             r="4"
@@ -320,9 +377,13 @@ function Spatial({ scene, index }: { scene: FrameScene; index: number }) {
             strokeWidth="1"
           />
         </svg>
-        <Card
+        <MotionCard
+          layout={active}
+          initial={active ? { opacity: 0, y: 18 } : false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 110, damping: 22 }}
           className={cn(
-            "absolute gap-0 overflow-hidden rounded-sm border-[#83d7d2]/35 bg-[#0b2025]/70 py-0 text-[#cdf2ee] shadow-[0_0_30px_#63ccc90a] backdrop-blur-sm transition-all duration-700 motion-reduce:transition-none",
+            "absolute gap-0 overflow-hidden rounded-sm border-[#83d7d2]/35 bg-[#0b2025]/70 py-0 text-[#cdf2ee] shadow-[0_0_30px_#63ccc90a] backdrop-blur-sm ",
             mechanism
               ? "top-[25%] left-[53%] h-[48%] w-[41%]"
               : "top-[25%] left-[5%] h-[60%] w-[52%]",
@@ -353,10 +414,14 @@ function Spatial({ scene, index }: { scene: FrameScene; index: number }) {
                 : "FOREST / CANOPY / ROOT SYSTEM"}
             </p>
           </div>
-        </Card>
-        <Card
+        </MotionCard>
+        <MotionCard
+          layout={active}
+          initial={active ? { opacity: 0, y: 18 } : false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 110, damping: 22 }}
           className={cn(
-            "absolute gap-0 rounded-sm border-[#83d7d2]/25 bg-[#0c1e23]/90 py-0 text-[#cdf2ee] backdrop-blur-md transition-all duration-700 motion-reduce:transition-none",
+            "absolute gap-0 rounded-sm border-[#83d7d2]/25 bg-[#0c1e23]/90 py-0 text-[#cdf2ee] backdrop-blur-md ",
             mechanism
               ? "top-[25%] left-[5%] w-[39%]"
               : "top-[25%] left-[66%] w-[29%]",
@@ -383,10 +448,14 @@ function Spatial({ scene, index }: { scene: FrameScene; index: number }) {
               <ArrowUpRight className="size-[1.4cqw]" />
             </div>
           </CardContent>
-        </Card>
-        <Card
+        </MotionCard>
+        <MotionCard
+          layout={active}
+          initial={active ? { opacity: 0, y: 18 } : false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 110, damping: 22 }}
           className={cn(
-            "absolute gap-0 rounded-sm border-[#83d7d2]/25 bg-[#0c1e23]/90 py-0 text-[#cdf2ee] transition-all duration-700 motion-reduce:transition-none",
+            "absolute gap-0 rounded-sm border-[#83d7d2]/25 bg-[#0c1e23]/90 py-0 text-[#cdf2ee] ",
             mechanism
               ? "bottom-[9%] left-[5%] w-[39%]"
               : "bottom-[9%] left-[66%] w-[29%]",
@@ -398,7 +467,7 @@ function Spatial({ scene, index }: { scene: FrameScene; index: number }) {
             </p>
             <WaterPath compact />
           </CardContent>
-        </Card>
+        </MotionCard>
         <div className="absolute right-[5%] bottom-[3%] left-[5%] flex items-center justify-between text-[0.9cqw] tracking-[0.15em] text-[#83d7d2]/50">
           <span>IMAGE + EXPLANATION + RELATIONSHIP</span>
           <span>0{index + 1} / CONTEXT RETAINED</span>
@@ -418,8 +487,9 @@ export function PresentationStage({
   className?: string;
 }) {
   const scene = scenes[sceneIndex]!;
+  const { ref, active } = useActiveMotion<HTMLDivElement>();
   return (
-    <div className="@container/frame-stage w-full">
+    <div ref={ref} className="@container/frame-stage w-full">
       <div
         className={cn(
           "@container/stage relative w-full overflow-hidden rounded-sm border border-white/10",
@@ -431,18 +501,33 @@ export function PresentationStage({
         role="img"
         aria-label={`${mode} mode: ${scene.title}`}
       >
-        <div
-          className="absolute inset-0 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-700"
-          key={mode}
-        >
-          {mode === "presentation" ? (
-            <Presentation key={sceneIndex} scene={scene} index={sceneIndex} />
-          ) : mode === "backdrop" ? (
-            <Backdrop key={scene.image} scene={scene} />
-          ) : (
-            <Spatial scene={scene} index={sceneIndex} />
-          )}
-        </div>
+        <AnimatePresence initial={false}>
+          <motion.div
+            className="absolute inset-0"
+            key={mode === "spatial" ? mode : `${mode}-${sceneIndex}`}
+            initial={
+              active ? { opacity: 0, scale: 1.025, filter: "blur(6px)" } : false
+            }
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            exit={{
+              opacity: 0,
+              scale: active ? 0.98 : 1,
+              filter: active ? "blur(4px)" : "none",
+            }}
+            transition={{
+              duration: active ? 0.65 : 0,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          >
+            {mode === "presentation" ? (
+              <Presentation scene={scene} index={sceneIndex} active={active} />
+            ) : mode === "backdrop" ? (
+              <Backdrop scene={scene} active={active} />
+            ) : (
+              <Spatial scene={scene} index={sceneIndex} active={active} />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );

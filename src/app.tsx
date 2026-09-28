@@ -1,3 +1,4 @@
+import { motion } from "motion/react";
 import {
   ArrowDown,
   ArrowRight,
@@ -25,7 +26,15 @@ import { Separator } from "@/components/ui/separator";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { FrameWalkthrough } from "@/components/frame-walkthrough";
 import { version } from "../package.json";
-import { modes } from "@/lib/presentation";
+import { AuroraField } from "@/components/effects/aurora-field";
+import {
+  EffectsToggle,
+  Reveal,
+  ScrollProgress,
+  ThoughtRibbon,
+  useEffects,
+} from "@/components/effects/motion-system";
+import { ScrollModeTour } from "@/components/scroll-mode-tour";
 import { PresentationStage } from "@/components/presentation-stage";
 
 // The login flow will be connected here. Deliberately inert for this landing-page PR.
@@ -36,8 +45,8 @@ function LaunchButton({ compact = false }: { compact?: boolean }) {
       variant={compact ? "outline" : "default"}
       className={
         compact
-          ? "h-10 rounded-full border-primary/25 px-4 text-xs"
-          : "h-12 rounded-full px-6 text-xs"
+          ? "h-9 rounded-full border-primary/25 px-3 text-[10px] sm:h-10 sm:px-4 sm:text-xs"
+          : "h-12 rounded-full px-6 text-xs shadow-[0_0_30px_#caff851c] transition-transform hover:scale-[1.035] active:scale-[.98]"
       }
     >
       Launch EchoFrame <ArrowRight className="ml-2 size-4" />
@@ -48,7 +57,10 @@ function LaunchButton({ compact = false }: { compact?: boolean }) {
 function Brand() {
   return (
     <span className="flex items-center gap-2.5">
-      <AudioLines className="size-6 text-primary" strokeWidth={2.5} />
+      <AudioLines
+        className="size-6 text-primary max-[380px]:hidden"
+        strokeWidth={2.5}
+      />
       <span className="text-xl font-semibold tracking-[-0.07em]">
         echoframe<span className="text-primary">.</span>
       </span>
@@ -128,16 +140,18 @@ const faqs = [
 ];
 
 export function App() {
+  const { enabled } = useEffects();
   return (
     <TooltipProvider>
-      <div>
+      <div className="overflow-x-clip">
+        <ScrollProgress />
         <Button
           asChild
           className="fixed top-2 left-2 z-50 -translate-y-20 focus:translate-y-0"
         >
           <a href="#main">Skip to content</a>
         </Button>
-        <header className="flex min-h-20 w-full flex-wrap items-center justify-between gap-4 border-b px-5 py-4 sm:px-8 xl:px-12">
+        <header className="sticky top-0 z-40 flex min-h-20 w-full flex-wrap items-center justify-between gap-4 border-b border-white/5 bg-background/70 px-5 py-4 backdrop-blur-xl sm:px-8 xl:px-12">
           <a
             href="#"
             aria-label="EchoFrame home"
@@ -147,7 +161,7 @@ export function App() {
           </a>
           <nav
             aria-label="Main navigation"
-            className="flex items-center gap-3 sm:gap-7"
+            className="flex items-center gap-1.5 sm:gap-7"
           >
             <Button
               asChild
@@ -163,6 +177,7 @@ export function App() {
             >
               <a href="#questions">Questions</a>
             </Button>
+            <EffectsToggle />
             <LaunchButton compact />
           </nav>
         </header>
@@ -170,9 +185,10 @@ export function App() {
         <main id="main">
           <section
             aria-labelledby="hero-heading"
-            className="grid w-full lg:grid-cols-[0.9fr_1.1fr]"
+            className="relative isolate grid w-full lg:grid-cols-[0.9fr_1.1fr]"
           >
-            <div className="flex min-w-0 flex-col justify-between px-5 pt-12 pb-10 sm:px-8 sm:pt-16 lg:border-r lg:pt-14 xl:px-12 xl:pt-20">
+            <AuroraField />
+            <div className="flex min-w-0 flex-col justify-between px-5 pt-12 pb-10 sm:px-8 sm:pt-16 lg:pt-14 xl:px-12 xl:pt-20">
               <div>
                 <Badge
                   variant="outline"
@@ -181,16 +197,23 @@ export function App() {
                   <span className="size-1.5 rounded-full bg-primary" />{" "}
                   VOICE-DRIVEN VISUAL STORYTELLING
                 </Badge>
-                <h1
+                <motion.h1
+                  initial={
+                    enabled
+                      ? { opacity: 0, y: 35, filter: "blur(10px)" }
+                      : false
+                  }
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
                   id="hero-heading"
                   className="mt-8 text-[clamp(2.9rem,5.5vw,8rem)] leading-[1.02] font-medium tracking-[-0.065em]"
                 >
                   Great stories don’t move in straight lines.
                   <br />
-                  <span className="text-primary">
+                  <span className="bg-gradient-to-r from-primary via-[#a7f5bf] to-[#66d7e6] bg-clip-text text-transparent">
                     Neither should your visuals.
                   </span>
-                </h1>
+                </motion.h1>
                 <p className="mt-7 text-base leading-relaxed text-muted-foreground xl:text-lg">
                   A keynote, a quiet backdrop, or a spatial canvas of supporting
                   context. Your voice decides what comes next. Your mode decides
@@ -221,87 +244,15 @@ export function App() {
                 </span>
               </div>
             </div>
-            <div className="min-w-0 bg-[#171e18] p-3 pt-7 sm:p-6 sm:pt-8 xl:p-9 xl:pt-10">
+            <div className="relative min-w-0 p-3 pt-7 sm:p-6 sm:pt-8 xl:p-9 xl:pt-10">
               <FrameWalkthrough />
             </div>
           </section>
 
-          <section
-            aria-label="The freedom to change direction"
-            className="grid border-y bg-primary text-primary-foreground md:grid-cols-[0.9fr_1.1fr]"
-          >
-            <div className="px-5 py-8 sm:px-8 xl:px-12">
-              <p className="text-[10px] font-semibold tracking-[0.15em] uppercase">
-                The presentation is a space. Explore it.
-              </p>
-              <p className="mt-3 text-3xl leading-tight font-medium tracking-[-0.05em] xl:text-4xl">
-                Take the question.
-                <br />
-                Go on the tangent. Come back.
-              </p>
-            </div>
-            <div className="flex items-center px-5 pt-0 pb-8 sm:px-8 md:py-8 xl:px-12">
-              <p className="text-base leading-relaxed text-primary-foreground/80 xl:text-lg">
-                You shouldn’t have to plan every turn before you start talking.
-                Give your material a set of rules, and let the conversation
-                decide the route.
-              </p>
-            </div>
-          </section>
+          <ThoughtRibbon />
+          <ScrollModeTour />
 
-          <section
-            id="modes"
-            aria-labelledby="modes-heading"
-            className="border-b"
-          >
-            <div className="flex flex-col justify-between gap-5 px-5 pt-14 pb-8 sm:px-8 md:flex-row md:items-end xl:px-12">
-              <div>
-                <p className="text-[10px] tracking-[0.2em] text-primary uppercase">
-                  Choose your presence
-                </p>
-                <h2
-                  id="modes-heading"
-                  className="mt-4 text-3xl font-medium tracking-[-0.045em] sm:text-5xl"
-                >
-                  One voice. More than one canvas.
-                </h2>
-              </div>
-              <Button
-                asChild
-                variant="link"
-                className="h-auto justify-start self-start p-0 text-xs text-primary md:self-end"
-              >
-                <a href="#frame">
-                  Compare the modes <ArrowRight className="size-3.5" />
-                </a>
-              </Button>
-            </div>
-            <div className="grid md:grid-cols-3">
-              {modes.map((mode, index) => (
-                <Card
-                  key={mode.id}
-                  className="gap-0 rounded-none border-x-0 border-b-0 bg-transparent py-0 shadow-none md:border-r md:last:border-r-0"
-                >
-                  <CardContent className="px-5 py-8 sm:px-8 xl:px-12">
-                    <p className="text-[10px] tracking-widest text-muted-foreground">
-                      0{index + 1} / {mode.name.toUpperCase()}
-                    </p>
-                    <h3 className="mt-4 text-xl font-medium tracking-tight">
-                      {mode.label}
-                    </h3>
-                    <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                      {mode.description}
-                    </p>
-                    <p className="mt-5 border-l border-primary/30 pl-3 text-xs leading-6 text-primary/80">
-                      {mode.rule}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
-
-          <section
+          <Reveal
             id="heuristics"
             aria-labelledby="engine-heading"
             className="w-full scroll-mt-6"
@@ -495,12 +446,12 @@ export function App() {
                 ))}
               </Tabs>
             </div>
-          </section>
+          </Reveal>
 
-          <section
+          <Reveal
             id="session"
             aria-labelledby="session-heading"
-            className="grid scroll-mt-6 border-y bg-[#202d23] lg:grid-cols-[1.1fr_0.9fr]"
+            className="grid scroll-mt-24 border-y bg-[radial-gradient(ellipse_at_0%_50%,#a4ed7b18,transparent_65%)] lg:grid-cols-[1.1fr_0.9fr]"
           >
             <div className="px-5 py-14 sm:px-8 sm:py-20 xl:px-12">
               <p className="flex items-center gap-2 text-[10px] tracking-[0.18em] text-primary uppercase">
@@ -590,9 +541,9 @@ export function App() {
                 </a>
               </Button>
             </div>
-          </section>
+          </Reveal>
 
-          <section
+          <Reveal
             id="questions"
             aria-labelledby="faq-heading"
             className="grid w-full gap-8 px-5 py-16 sm:px-8 lg:grid-cols-[0.65fr_1.35fr] lg:gap-20 lg:py-20 xl:px-12"
@@ -622,9 +573,9 @@ export function App() {
                 </AccordionItem>
               ))}
             </Accordion>
-          </section>
+          </Reveal>
 
-          <section
+          <Reveal
             aria-labelledby="closing-heading"
             className="flex flex-col justify-between gap-8 border-y px-5 py-14 sm:px-8 sm:py-20 md:flex-row md:items-end xl:px-12"
           >
@@ -646,7 +597,7 @@ export function App() {
                 <LaunchButton />
               </div>
             </div>
-          </section>
+          </Reveal>
         </main>
         <footer className="w-full px-5 py-8 sm:px-8 xl:px-12">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">

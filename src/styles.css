@@ -31,10 +31,10 @@
 
 :root {
   color-scheme: dark;
-  --background: #101411;
-  --foreground: #f0f1e9;
-  --card: #181d19;
-  --primary: #c0e5ac;
+  --background: #080c0d;
+  --foreground: #f2f6ef;
+  --card: #101817;
+  --primary: #caff85;
 }
 
 @layer base {

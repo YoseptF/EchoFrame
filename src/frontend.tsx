@@ -6,9 +6,12 @@ import "@fontsource/manrope/latin-600.css";
 import "@fontsource/manrope/latin-700.css";
 import "./styles.css";
 import { App } from "./app";
+import { EffectsProvider } from "@/components/effects/motion-system";
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <EffectsProvider>
+      <App />
+    </EffectsProvider>
   </React.StrictMode>,
 );

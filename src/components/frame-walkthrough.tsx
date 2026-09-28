@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { motion } from "motion/react";
+import { Tilt, useActiveMotion } from "@/components/effects/motion-system";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -39,9 +41,19 @@ const modeIcons = {
 };
 
 export function FrameWalkthrough() {
-  const [mode, setMode] = useState<FrameMode>("presentation");
+  const [mode, setMode] = useState<FrameMode>("spatial");
   const [sceneIndex, setSceneIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const { ref, active } = useActiveMotion<HTMLElement>();
+  const started = useRef(false);
+  useEffect(() => {
+    if (active && !started.current) {
+      started.current = true;
+      setPlaying(true);
+    } else if (!active) {
+      setPlaying(false);
+    }
+  }, [active]);
   const scene = scenes[sceneIndex]!;
   const selectedMode = modes.find((item) => item.id === mode)!;
 
@@ -74,6 +86,7 @@ export function FrameWalkthrough() {
 
   return (
     <section
+      ref={ref}
       id="frame"
       aria-label="Presentation mode walkthrough"
       className="@container/walkthrough min-w-0"
@@ -92,7 +105,7 @@ export function FrameWalkthrough() {
       >
         <TabsList
           aria-label="Choose a presentation mode"
-          className="mb-4 h-12 w-full rounded-lg border border-white/10 bg-black/20 p-1"
+          className="relative mb-5 h-12 w-full rounded-full border border-white/10 bg-white/[0.035] p-1 backdrop-blur-lg"
         >
           {modes.map((item) => {
             const Icon = modeIcons[item.id];
@@ -100,19 +113,39 @@ export function FrameWalkthrough() {
               <TabsTrigger
                 key={item.id}
                 value={item.id}
-                className="gap-1.5 px-2 text-[10px] sm:text-xs"
+                className="relative gap-1.5 rounded-full px-2 text-[10px] data-[state=active]:bg-transparent dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-transparent sm:text-xs"
               >
-                <Icon className="size-3.5" />
-                {item.name}
+                {mode === item.id && (
+                  <motion.span
+                    layoutId="walkthrough-mode"
+                    className="absolute inset-0 rounded-full border border-primary/25 bg-primary/10 shadow-[0_0_20px_#caff8510]"
+                    transition={{ type: "spring", stiffness: 350, damping: 32 }}
+                  />
+                )}
+                <Icon className="relative size-3.5" />
+                <span className="relative">{item.name}</span>
               </TabsTrigger>
             );
           })}
         </TabsList>
-        {modes.map((item) => (
-          <TabsContent key={item.id} value={item.id} className="m-0">
-            <PresentationStage mode={item.id} sceneIndex={sceneIndex} />
-          </TabsContent>
-        ))}
+        <TabsContent value={mode} className="m-0">
+          <Tilt className="relative rounded-xl border border-white/15 bg-[#0b1211]/80 p-2 shadow-[0_20px_80px_#0008]">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -inset-4 -z-10 rounded-[2rem] bg-cyan-300/5 blur-2xl"
+            />
+            <PresentationStage mode={mode} sceneIndex={sceneIndex} />
+            <div className="absolute inset-x-2 bottom-1 h-px overflow-hidden bg-white/5">
+              <motion.div
+                key={`${sceneIndex}-${playing}`}
+                className="h-full origin-left bg-gradient-to-r from-primary to-cyan-300"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: playing ? 1 : 0 }}
+                transition={{ duration: playing ? 7 : 0, ease: "linear" }}
+              />
+            </div>
+          </Tilt>
+        </TabsContent>
       </Tabs>
       <div className="mt-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-1">
@@ -243,7 +276,7 @@ export function FrameWalkthrough() {
         ))}
       </div>
 
-      <Card className="mt-5 gap-0 rounded-lg border-white/10 bg-background/45 py-0 shadow-none">
+      <Card className="mt-5 gap-0 overflow-hidden rounded-xl border-white/10 bg-background/40 py-0 shadow-none backdrop-blur-xl">
         <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
           <p className="flex items-center gap-2 text-[10px] tracking-widest text-muted-foreground uppercase">
             <AudioLines
@@ -257,11 +290,17 @@ export function FrameWalkthrough() {
           <span className="text-[10px] text-primary/75">{scene.cue}</span>
         </div>
         <div className="px-4 py-4" aria-live={playing ? "off" : "polite"}>
-          <p className="text-sm leading-7 text-muted-foreground">
+          <motion.p
+            key={sceneIndex}
+            initial={active ? { opacity: 0, y: 8 } : false}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-sm leading-7 text-muted-foreground"
+          >
             “{before}
             <span className="text-foreground">{scene.focus}</span>
             {after}”
-          </p>
+          </motion.p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {scene.tags.map((tag) => (
               <Badge
