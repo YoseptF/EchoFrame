@@ -13,15 +13,34 @@
     "version-packages": "changeset version && bun install --no-frozen-lockfile",
     "release": "changeset tag",
     "check:changeset": "bash scripts/check-changeset.sh",
-    "launch": "bun scripts/launch.ts"
+    "launch": "bun scripts/launch.ts",
+    "build": "bun scripts/build.ts"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",
     "@changesets/cli": "^3.0.3",
     "@types/bun": "latest",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "bun-plugin-tailwind": "^0.1.2",
+    "shadcn": "^4.21.0",
+    "tailwindcss": "^4.3.3",
+    "tw-animate-css": "^1.4.0",
     "wrangler": "^4.143.0"
   },
   "peerDependencies": {
     "typescript": "^7"
+  },
+  "dependencies": {
+    "@fontsource/manrope": "^5.3.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cn": "^0.4.0",
+    "lucide-react": "^1.48.0",
+    "motion": "^13.4.4",
+    "radix-ui": "^1.6.7",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tailwind-merge": "^3.7.0"
   }
 }
