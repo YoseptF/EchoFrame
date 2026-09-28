@@ -279,9 +279,7 @@ export function FrameWalkthrough() {
             Composition decision
           </p>
           <p className="mt-1.5 text-xs leading-6 text-muted-foreground">
-            {mode === "backdrop"
-              ? "Hold one background while the subject develops. Change the scene when the talk widens to the water cycle."
-              : scene.action}
+            {scene.action[mode]}
           </p>
         </div>
       </Card>

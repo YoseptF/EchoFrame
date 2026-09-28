@@ -42,8 +42,14 @@ export const scenes = [
     contextTitle: "A connected system",
     context:
       "Water moves through the soil, into plants, and back to the atmosphere.",
-    action:
-      "Establish the subject. Bring the forest and its water pathway into view.",
+    action: {
+      presentation:
+        "Establish one idea with a headline and one supporting visual.",
+      backdrop:
+        "Use the forest as the sole background. Leave the stage free of text.",
+      spatial:
+        "Connect the forest image to an explanation and its water pathway.",
+    },
   },
   {
     id: "transpiration",
@@ -58,8 +64,14 @@ export const scenes = [
     contextTitle: "Transpiration",
     context:
       "Plants take up water through their roots and release it as vapor through their leaves.",
-    action:
-      "Promote the explanation and pathway. Keep the forest as supporting context.",
+    action: {
+      presentation:
+        "Move from the opening idea to an explanation and a pathway diagram.",
+      backdrop:
+        "Hold the forest background while the speaker develops the same subject.",
+      spatial:
+        "Promote the explanation and pathway. Keep the forest as supporting context.",
+    },
   },
   {
     id: "connection",
@@ -74,8 +86,14 @@ export const scenes = [
     contextTitle: "Ground ↔ sky",
     context:
       "Transpiration connects water in the soil to moisture in the atmosphere.",
-    action:
-      "Widen the view. Connect the forest, the water, and the atmosphere.",
+    action: {
+      presentation:
+        "Bring the talk back to one takeaway, supported by the water scene.",
+      backdrop:
+        "Change to the waterfall as the talk widens to the water cycle.",
+      spatial:
+        "Widen the view. Connect the forest, the water, and the atmosphere.",
+    },
   },
 ] as const;
 
