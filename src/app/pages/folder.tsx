@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FolderX, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { FolderX, MoreHorizontal, Pencil, Radio, Trash2 } from "lucide-react";
 import { Link, useLocation, useParams } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -85,28 +85,35 @@ export function FolderPage() {
         ]}
         actions={
           folder && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Folder options"
-                >
-                  <MoreHorizontal />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => setRenaming(true)}>
-                  <Pencil /> Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  variant="destructive"
-                  onSelect={() => setDeleting(true)}
-                >
-                  <Trash2 /> Delete folder
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <>
+              <Button asChild size="sm" className="rounded-full">
+                <Link href={`/folders/${folder.id}/live`}>
+                  <Radio /> Go live
+                </Link>
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Folder options"
+                  >
+                    <MoreHorizontal />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setRenaming(true)}>
+                    <Pencil /> Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onSelect={() => setDeleting(true)}
+                  >
+                    <Trash2 /> Delete folder
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
           )
         }
       />

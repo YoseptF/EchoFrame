@@ -67,7 +67,7 @@ function AppSidebar() {
   const { setOpenMobile } = useSidebar();
   const [onDashboard] = useRoute("/");
   const [onSettings] = useRoute("/settings");
-  const [, folderRoute] = useRoute("/folders/:folderId");
+  const [, folderRoute] = useRoute("/folders/:folderId/*?");
   const folders = useLibraryData(
     (library) => library.folders(profile.id),
     [profile.id],
