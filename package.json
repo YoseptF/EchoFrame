@@ -1,9 +1,21 @@
 {
   "name": "echoframe",
+  "version": "0.0.0",
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test --pass-with-no-tests",
+    "changeset": "changeset",
+    "version-packages": "changeset version && bun install --no-frozen-lockfile",
+    "release": "changeset tag",
+    "check:changeset": "bash scripts/check-changeset.sh",
+    "launch": "bun scripts/launch.ts"
+  },
   "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
     "@types/bun": "latest"
   },
   "peerDependencies": {
