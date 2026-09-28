@@ -1,12 +1,16 @@
 {
   "worktree": {
-    "setup": ["bun install"],
+    "setup": [
+      "bun install",
+      "# dev secrets are gitignored; copy them from the main checkout, wherever this worktree lives",
+      "cp \"$(git rev-parse --git-common-dir)/../.dev.vars\" .dev.vars 2>/dev/null || cp .dev.vars.example .dev.vars"
+    ],
     "teardown": "pkill -f \"wrangler dev\" 2>/dev/null || true"
   },
   "scripts": {
     "dev": {
-      "type": "service",
-      "command": "bunx wrangler dev --port $PASEO_PORT"
+      "type": "script",
+      "command": "bunx wrangler dev --port 8787"
     },
     "test": {
       "type": "script",
