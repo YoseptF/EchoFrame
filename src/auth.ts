@@ -26,7 +26,7 @@ type Session = SessionUser & { exp: number };
 
 const sessionCookie = "ef_session";
 const stateCookie = "ef_oauth_state";
-const sessionSeconds = 60 * 60 * 24 * 30;
+export const sessionSeconds = 60 * 60 * 24 * 30;
 const stateSeconds = 60 * 10;
 
 export const googleAvailable = (env: AuthEnv) =>
