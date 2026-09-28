@@ -5,7 +5,7 @@ import "@fontsource/manrope/latin-500.css";
 import "@fontsource/manrope/latin-600.css";
 import "@fontsource/manrope/latin-700.css";
 import "./styles.css";
-import { App } from "./app";
+import { App } from "./landing";
 import { EffectsProvider } from "@/components/effects/motion-system";
 
 createRoot(document.getElementById("root")!).render(
