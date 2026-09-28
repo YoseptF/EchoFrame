@@ -605,7 +605,15 @@ export function App() {
           </div>
           <Separator className="my-6" />
           <div className="flex items-center justify-between gap-4 text-[10px] text-muted-foreground">
-            <span>© {new Date().getFullYear()} EchoFrame</span>
+            <span className="flex flex-wrap gap-x-4 gap-y-1">
+              <span>© {new Date().getFullYear()} EchoFrame</span>
+              <a href="/privacy" className="hover:text-foreground">
+                Privacy
+              </a>
+              <a href="/terms" className="hover:text-foreground">
+                Terms
+              </a>
+            </span>
             <span>
               v{version} <span className="mx-2 text-white/20">/</span>{" "}
               Voice-driven visual storytelling

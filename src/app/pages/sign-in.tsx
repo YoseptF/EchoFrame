@@ -159,7 +159,22 @@ export function SignInPage() {
             <CardFooter>
               <p className="text-xs leading-5 text-muted-foreground">
                 EchoFrame uses your name, email, and photo to label your
-                library. Your files are never uploaded.
+                library. Your files are never uploaded. By continuing you agree
+                to the{" "}
+                <a
+                  href="/terms"
+                  className="underline underline-offset-4 hover:text-foreground"
+                >
+                  terms
+                </a>{" "}
+                and{" "}
+                <a
+                  href="/privacy"
+                  className="underline underline-offset-4 hover:text-foreground"
+                >
+                  privacy policy
+                </a>
+                .
               </p>
             </CardFooter>
           </Card>

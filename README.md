@@ -96,6 +96,10 @@ production and staging (`bunx wrangler secret put <NAME>` and `--env staging`). 
 the production host. Without the Google values, sign-in shows as unavailable. PR preview URLs
 can't be registered with Google, so sign-in works on staging and production, not on previews.
 
+`/privacy` and `/terms` (`src/components/legal.tsx`) are rendered to static HTML during the build.
+Google requires the privacy policy URL before the OAuth app can be published. Keep both pages true
+to what the code does when data handling changes.
+
 ## How changes ship
 
 Branch off `release`, PR into `release`, add a changeset for anything users would notice. Merging
