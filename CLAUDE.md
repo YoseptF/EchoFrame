@@ -1,3 +1,12 @@
+# Repository guidance
+
+Read [AGENTS.md](AGENTS.md) and [CONTRIBUTING.md](CONTRIBUTING.md) first. For UI, copy, frames,
+or animation work, read [the EchoFrame style guide](docs/design/style-guide.md) before editing.
+It defines the art direction, reusable components, and visual checks.
+
+This app uses Bun to build React assets and Wrangler/Cloudflare Workers to serve them, as described
+in [README.md](README.md). Preserve that architecture. The Bun examples below are API reference,
+not an instruction to replace the existing server or deployment setup.
 
 Default to using Bun instead of Node.js.
 
