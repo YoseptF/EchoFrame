@@ -2,8 +2,8 @@ name: Production
 
 # Every merge into `main` is a release. If the armed launch is past its cooldown it becomes a major
 # changeset; then the pending changesets become one version bump and one changelog entry, committed
-# to main and fast-forwarded to release, the version is tagged and the GitHub release written from
-# the changelog.
+# to main and fast-forwarded to release, the Worker is deployed to echoframe.yosept.me, the version
+# is tagged and the GitHub release written from the changelog.
 on:
   push:
     branches: [main]
@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   release:
-    name: Version, tag and release
+    name: Deploy and release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,7 +57,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Deploying and publishing go here once echoframe has somewhere to ship to.
+      - name: Deploy the Worker
+        run: bunx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       - name: Tag the version
         run: bun run release
