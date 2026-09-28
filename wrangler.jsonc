@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "echoframe",
+  "account_id": "57bac9abe1dac53737eb62a512ab8025",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": false,
+  // No version URLs on production. Staging turns them on for the per-PR previews.
+  "preview_urls": false,
+  "routes": [{ "pattern": "echoframe.yosept.me", "custom_domain": true }],
+  "observability": { "enabled": true },
+  // Staging: deployed from the `release` branch under its own name and host. Pull requests get a
+  // preview URL each: .github/workflows/preview.yml uploads a version of this Worker under a
+  // `pr-<n>` alias.
+  "env": {
+    "staging": {
+      "name": "echoframe-staging",
+      "routes": [{ "pattern": "echoframe-staging.yosept.me", "custom_domain": true }],
+      "preview_urls": true
+    }
+  }
+}

@@ -6,10 +6,22 @@ To install dependencies:
 bun install
 ```
 
-To run:
+echoframe is a Cloudflare Worker: https://echoframe.yosept.me (staging:
+https://echoframe-staging.yosept.me). To run it locally:
 
 ```bash
-bun run index.ts
+bun run dev
 ```
 
-This project was created using `bun init` in bun v1.4.2. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+Checks:
+
+```bash
+bun run typecheck
+bun test
+```
+
+## How changes ship
+
+Branch off `release`, PR into `release`, add a changeset for anything users would notice. Merging
+`release` into `main` versions, tags and releases automatically. Major versions are launches, not
+bumps. See [CONTRIBUTING.md](CONTRIBUTING.md) and [launches/README.md](launches/README.md).

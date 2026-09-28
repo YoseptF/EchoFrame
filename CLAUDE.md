@@ -104,3 +104,14 @@ bun --hot ./index.ts
 ```
 
 For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+
+## Commits and releases
+
+- Commit messages are one line of natural language. No body, no type prefix, no trailers, no tool
+  attribution of any kind in commits, tags, PRs, releases, code or docs.
+- Stage files by explicit path, never `git add -A` or `git add .`.
+- Branch off `release`, PR into `release`. Never push to `main` or `release` directly.
+- User-visible change: add a changeset (`bun run changeset`). Never pick `major`: majors are
+  launches, and only the owner arms one by writing `launches/v<major>.md`. Do not create or edit a
+  launch file unless asked to. The rules are in CONTRIBUTING.md and launches/README.md.
+- Scratch files go in `tmp/`.
