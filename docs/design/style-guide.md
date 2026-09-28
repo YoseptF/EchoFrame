@@ -27,7 +27,9 @@ the direction; update this guide alongside an intentional design change.
    idea,” “a dream in progress,” “not available yet,” and similar copy that dismisses the product.
 10. **Keep the commercial and implementation boundaries honest.** Live sessions require the
     visitor's own Jev API key. The page's authored walkthrough is an illustration. Launch buttons
-    deliberately do nothing until the login flow is implemented; do not silently wire a fake flow.
+    open the app at `/app`, where the library lives on the visitor's device.
+11. **In the app, everything is shadcn.** Pages are compositions of `src/components/ui/`
+    primitives. No hand-styled controls, panels, or form elements.
 
 ## What the experience should feel like
 
@@ -57,7 +59,11 @@ suggested new files.
 
 | Change                                                                             | Start here                                                                                                             | Responsibility                                                                                                          |
 | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Page composition, navigation, hero, FAQs, session requirements, heuristic examples | [src/app.tsx](../../src/app.tsx)                                                                                       | Composes the landing page; owns its local `Brand`, `LaunchButton`, FAQ and rule content                                 |
+| Page composition, navigation, hero, FAQs, session requirements, heuristic examples | [src/landing.tsx](../../src/landing.tsx)                                                                               | Composes the landing page; owns its `LaunchButton`, FAQ and rule content                                                |
+| Wordmark and mode icons                                                            | [brand.tsx](../../src/components/brand.tsx), [mode-icons.ts](../../src/components/mode-icons.ts)                       | `Brand` and `modeIcons`, shared by the landing page and the app                                                         |
+| App routes, sign-in, dashboard, folder, settings                                   | [src/app](../../src/app)                                                                                               | `routes.tsx` owns routing; `pages/` compose screens; `components/` holds app feature compositions                       |
+| App data and local storage                                                         | [library-context.tsx](../../src/app/library-context.tsx), [src/lib/library](../../src/lib/library)                     | Signed-in profile, `useLibraryData`/`useLibraryAction` hooks; `Library` model on a `FileStore`                          |
+| Jev requests                                                                       | [jev.ts](../../src/lib/jev.ts)                                                                                         | Typed client for the `/api/jev` relay and friendly error messages                                                       |
 | Shared colors, fonts, radii, base styles                                           | [src/styles.css](../../src/styles.css)                                                                                 | Tailwind v4 theme tokens and reduced-motion CSS                                                                         |
 | React mount, local font imports, effects provider                                  | [src/frontend.tsx](../../src/frontend.tsx)                                                                             | Manrope imports and the single top-level `EffectsProvider`                                                              |
 | Browser title, description, social metadata, favicon reference                     | [src/index.html](../../src/index.html)                                                                                 | HTML entry and metadata; keep it consistent with page copy                                                              |
@@ -71,22 +77,31 @@ suggested new files.
 | Conditional Tailwind classes                                                       | [src/lib/utils.ts](../../src/lib/utils.ts)                                                                             | `cn(...)` merges classes for feature components                                                                         |
 | shadcn generator settings                                                          | [components.json](../../components.json)                                                                               | `new-york`, React/TSX, neutral base, CSS variables, Lucide, `@/` aliases                                                |
 | Bundled photography and attribution                                                | [public/images](../../public/images) and [source list](../../public/images/README.md)                                  | Local WebP images and their provenance                                                                                  |
-| Build and serving                                                                  | [scripts/build.ts](../../scripts/build.ts), [src/index.ts](../../src/index.ts), [wrangler.jsonc](../../wrangler.jsonc) | Bun builds static assets; Cloudflare serves them; the Worker retains `/version`                                         |
+| Build and serving                                                                  | [scripts/build.ts](../../scripts/build.ts), [src/index.ts](../../src/index.ts), [wrangler.jsonc](../../wrangler.jsonc) | Bun builds both entries; Cloudflare serves them; the Worker owns `/version`, `/api/jev`, and the `/app` fallback        |
 
 ### Which shadcn component to use
 
 Import feature UI from `@/components/ui/<name>`. All of these are already installed.
 
-| Need                                              | Use                                              | Existing example                                         |
-| ------------------------------------------------- | ------------------------------------------------ | -------------------------------------------------------- |
-| Action, icon action, or styled navigation link    | `Button`; `asChild` for links                    | `LaunchButton` in `app.tsx`; walkthrough controls        |
-| Mode or heuristic selection                       | `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` | Mode selector in `FrameWalkthrough`; rules in `app.tsx`  |
-| Related content, transcript, or information panel | `Card`, `CardContent` and other Card slots       | Transcript card; Spatial panels                          |
-| Small state, topic, or category marker            | `Badge`                                          | Transcript tags and section eyebrows                     |
-| Expanded stage or modal content                   | `Dialog` and its title/description/trigger slots | Expanded presentation in `FrameWalkthrough`              |
-| Expandable questions                              | `Accordion` and its item/trigger/content slots   | FAQs in `app.tsx`                                        |
-| An intentional divider                            | `Separator`                                      | Footer                                                   |
-| Help for an icon control                          | `Tooltip` with `TooltipTrigger asChild`          | Primitive is installed; `TooltipProvider` wraps the page |
+| Need                                              | Use                                                                                 | Existing example                                              |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Action, icon action, or styled navigation link    | `Button`; `asChild` for links                                                       | `LaunchButton` in `landing.tsx`; walkthrough controls         |
+| Mode or heuristic selection                       | `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`                                    | Mode selector in `FrameWalkthrough`; rules in `landing.tsx`   |
+| Related content, transcript, or information panel | `Card`, `CardContent` and other Card slots                                          | Transcript card; Spatial panels                               |
+| Small state, topic, or category marker            | `Badge`                                                                             | Transcript tags and section eyebrows                          |
+| Expanded stage or modal content                   | `Dialog` and its title/description/trigger slots                                    | Expanded presentation in `FrameWalkthrough`                   |
+| Expandable questions                              | `Accordion` and its item/trigger/content slots                                      | FAQs in `landing.tsx`                                         |
+| An intentional divider                            | `Separator`                                                                         | Footer                                                        |
+| Help for an icon control                          | `Tooltip` with `TooltipTrigger asChild`                                             | Primitive is installed; `TooltipProvider` wraps the page      |
+| App navigation shell                              | `Sidebar` family, `Breadcrumb`                                                      | `AppShell` and `PageHeader` in `app/components/app-shell.tsx` |
+| Forms                                             | `Field` family, `Input`, `Textarea`, `InputGroup`, `Select`, `Slider`, `RadioGroup` | Settings, asset sheet, echo settings                          |
+| Choice between described options                  | `RadioGroup` inside `FieldLabel` choice cards                                       | Mode choice in `EchoConfigForm`                               |
+| Rows with media, text, and an action              | `Item` family                                                                       | Sign-in profiles, Jev key prompt                              |
+| Nothing here yet, or a missing page               | `Empty` family                                                                      | Empty library, empty folder, not found                        |
+| Menus and confirmations                           | `DropdownMenu`; `AlertDialog` via `ConfirmDialog`                                   | Folder card menu, deletes                                     |
+| Side editor                                       | `Sheet`                                                                             | `AssetSheet`                                                  |
+| Notifications                                     | `toast` from `sonner` with the `Toaster`                                            | Saves, uploads, key checks                                    |
+| Loading placeholders                              | `Skeleton`, `Spinner`                                                               | Folder grid, sidebar, uploads                                 |
 
 If a missing primitive is necessary, add the official component with
 `bunx shadcn add <component>`, then inspect the generated files and lockfile. Do not install a
@@ -239,10 +254,27 @@ launch action and in session setup. Jev is TypeSafe's decision model; preserve t
 [key dashboard](https://console.typesafe.ai/keys) links unless their official destinations change.
 Do not imply that Jev generates image pixels or that this landing-page walkthrough runs live AI.
 
-`LaunchButton` is currently a deliberate placeholder for a future login flow. Preserve that
-behavior unless the task explicitly implements the flow. The walkthrough label explains the
-example without turning the entire page into a disclaimer. Do not collect API keys or microphone
-permissions as decoration.
+`LaunchButton` links to `/app`. The walkthrough label explains the example without turning the
+entire page into a disclaimer. Do not collect API keys or microphone permissions as decoration.
+
+## The app
+
+The app shares the tokens, Manrope, and shadcn primitives with the landing page, but it is a work
+surface: quieter, denser, and built entirely from `src/components/ui/`. The sign-in screen may use
+`AuroraField` (it must sit inside a `<section>`, which the shader uses for pointer tracking);
+signed-in pages do not run ambient effects.
+
+- **Local first, and say so.** Profiles, folders, and assets live in the browser's private file
+  system. Copy should say the library stays on this device; never imply cloud sync or accounts.
+- **Words drive matching.** Jev reads descriptions and tags, not pixels. Keep the "needs a
+  description" prompts visible for media, and never imply Jev sees images.
+- **Keys stay the user's.** The Jev key is stored in the profile and sent only through the
+  `/api/jev` relay. Check a key before saving it and explain failures in plain words.
+- **Page anatomy.** Every signed-in page starts with `PageHeader` (sidebar trigger, breadcrumb,
+  actions), then a large heading, using the standard page gutters. Destructive actions go through
+  `ConfirmDialog`. Results are reported with a toast.
+- **Mobile.** The sidebar becomes a sheet that closes after navigation; grids collapse to one
+  column; toolbars wrap.
 
 ## Recipes
 

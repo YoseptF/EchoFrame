@@ -19,10 +19,14 @@
 - Reuse `src/components/effects/motion-system.tsx` for motion policy. Keep reduced motion, the
   pause control, offscreen/hidden-tab suspension, and shader fallback working.
 - Product copy is confident and specific. Live sessions require the visitor's own Jev API key.
-  The authored walkthrough and intentionally inert launch buttons must not masquerade as a live
-  integration. See the guide before changing those boundaries.
+  The landing walkthrough is authored and must not masquerade as a live integration. See the guide
+  before changing those boundaries.
+- The app at `/app` is local-first: profiles, folders and assets live in the browser's private
+  file system behind `src/lib/library/`. There is no database and no account server. Jev calls go
+  through the Worker's `/api/jev` relay, which forwards the user's key and stores nothing.
 - Verify visual changes in the browser on desktop and mobile, including actual scrolling and
-  interaction. Put every scratch artifact in `tmp/`.
+  interaction. Put every scratch artifact in `tmp/`. `paseo script start dev` runs the dev server
+  from `paseo.json`.
 
 ## Project workflow
 

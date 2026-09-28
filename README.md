@@ -48,8 +48,8 @@ large stage. The shader caps its resolution and draw rate, stops offscreen or in
 falls back to a static gradient when WebGL is unavailable or its context is lost.
 
 Live-session messaging explicitly requires the visitor's own Jev API key. The **Launch EchoFrame**
-buttons intentionally have no action until the login flow is added. No credentials are collected,
-no microphone is accessed, and no Jev calls are made by this page. Official links point to
+buttons open the app at `/app`. The landing page itself collects no credentials, accesses no
+microphone, and makes no Jev calls. Official links point to
 [TypeSafe's key dashboard](https://console.typesafe.ai/keys) and
 [Jev's quickstart](https://docs.typesafe.ai/introduction/quickstart).
 
@@ -57,6 +57,26 @@ Mode and scene content lives in `src/lib/presentation.ts`; renderers live in
 `src/components/presentation-stage.tsx`. The forest/water-cycle example links its scientific
 reference to USGS Water Science. UI components can be added with
 `bunx shadcn add <component>`. Photo sources are listed in `public/images/README.md`.
+
+## The app
+
+`/app` is a second Bun HTML entry (`src/app/index.html`) sharing chunks with the landing page. The
+Worker serves the app shell for every `/app/*` address so deep links work; routing is client-side
+with `wouter`.
+
+The app is local-first. There is no database or account server:
+
+- **Profiles** are the sign-in. Each profile on a device keeps its own folders and Jev key.
+- **Storage** is the browser's Origin Private File System, laid out as real folders and files
+  (`src/lib/library/library.ts` documents the layout). `FileStore` in `src/lib/library/store.ts`
+  is the seam an installed app can implement against the real disk; tests use the in-memory store.
+- **Folders** hold image, audio, and text assets. Each asset has a description and tags; Jev
+  matches speech against words, so media without a description is flagged.
+- **Echo settings** per folder: starting mode, speech window, minimum hold, the relevance,
+  recency and continuity weights, and the speech language.
+- **Jev** calls go to `POST /api/jev`. TypeSafe does not accept browser origins, so the Worker
+  forwards the request with the user's own key and stores nothing. Settings checks a key with one
+  small request before saving it.
 
 ## How changes ship
 
