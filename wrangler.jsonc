@@ -3,6 +3,13 @@
   "name": "echoframe",
   "account_id": "57bac9abe1dac53737eb62a512ab8025",
   "main": "src/index.ts",
+  "build": { "command": "bun run build", "watch_dir": ["src", "public"] },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/version"],
+    "not_found_handling": "none",
+  },
   "compatibility_date": "2026-09-01",
   "workers_dev": false,
   // No version URLs on production. Staging turns them on for the per-PR previews.
@@ -15,8 +22,10 @@
   "env": {
     "staging": {
       "name": "echoframe-staging",
-      "routes": [{ "pattern": "echoframe-staging.yosept.me", "custom_domain": true }],
-      "preview_urls": true
-    }
-  }
+      "routes": [
+        { "pattern": "echoframe-staging.yosept.me", "custom_domain": true },
+      ],
+      "preview_urls": true,
+    },
+  },
 }

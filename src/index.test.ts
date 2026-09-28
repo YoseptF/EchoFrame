@@ -1,19 +1,28 @@
-import { expect, test } from "bun:test";
+import { expect, mock, test } from "bun:test";
 import worker from "./index";
 import { version } from "../package.json";
 
-const get = (path: string) => worker.fetch(new Request(`https://echoframe.yosept.me${path}`));
-
-test("the home page shows the version", async () => {
-  const res = get("/");
-  expect(res.headers.get("content-type")).toContain("text/html");
-  expect(await res.text()).toContain(`v${version}`);
+test("the version endpoint bypasses static assets", async () => {
+  const fetch = mock(async () => new Response("asset"));
+  const response = await worker.fetch(
+    new Request("https://echoframe.yosept.me/version"),
+    { ASSETS: { fetch } },
+  );
+  expect(await response.json()).toEqual({ version });
+  expect(fetch).not.toHaveBeenCalled();
 });
 
-test("the version is served as json", async () => {
-  expect(await get("/version").json()).toEqual({ version });
-});
-
-test("anything else is not found", () => {
-  expect(get("/nope").status).toBe(404);
+test("page and asset requests preserve the asset service response", async () => {
+  for (const [path, status, body] of [
+    ["/", 200, "landing page"],
+    ["/images/forest.webp", 200, "image"],
+    ["/nope", 404, "Not found"],
+  ] as const) {
+    const request = new Request(`https://echoframe.yosept.me${path}`);
+    const fetch = mock(async () => new Response(body, { status }));
+    const response = await worker.fetch(request, { ASSETS: { fetch } });
+    expect(fetch).toHaveBeenCalledWith(request);
+    expect(response.status).toBe(status);
+    expect(await response.text()).toBe(body);
+  }
 });
