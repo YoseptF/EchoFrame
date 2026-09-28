@@ -1,5 +1,9 @@
 # echoframe
 
+For UI work, start with the [style guide and component map](docs/design/style-guide.md).
+Agent entry instructions are in [AGENTS.md](AGENTS.md); contribution rules are in
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 To install dependencies:
 
 ```bash
