@@ -21,7 +21,8 @@ jobs:
 
   changeset:
     name: Changeset present, launch rules kept
-    if: github.event_name == 'pull_request' && github.base_ref == 'release'
+    # Not on the sync PR from main: the version commit changes package.json and consumes changesets.
+    if: github.event_name == 'pull_request' && github.base_ref == 'release' && github.head_ref != 'main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
