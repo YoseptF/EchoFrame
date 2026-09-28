@@ -185,7 +185,7 @@ export function App() {
                 >
                   Great stories don’t move in straight lines.
                   <br />
-                  <span className="font-serif font-normal tracking-[-0.025em] text-primary italic">
+                  <span className="text-primary">
                     Neither should your visuals.
                   </span>
                 </h1>
@@ -263,7 +263,7 @@ export function App() {
                 >
                   Your speech is the signal.
                   <br />
-                  <span className="font-serif text-primary italic">
+                  <span className="text-primary">
                     The heuristics give it shape.
                   </span>
                 </h2>
@@ -462,7 +462,7 @@ export function App() {
                 <br />
                 Your library.
                 <br />
-                <span className="font-serif text-primary italic">
+                <span className="text-primary">
                   Your Jev key.
                 </span>
               </h2>
@@ -584,7 +584,7 @@ export function App() {
             >
               Lose the line.
               <br />
-              <span className="font-serif text-primary italic">
+              <span className="text-primary">
                 Keep the story.
               </span>
             </h2>
