@@ -77,6 +77,12 @@ The app is local-first. There is no database:
   matches speech against words, so media without a description is flagged.
 - **Echo settings** per folder: starting mode, speech window, minimum hold, the relevance,
   recency and continuity weights, and the speech language.
+- **Live sessions** (`/app/folders/<id>/live`) listen with the browser's speech recognition, or
+  take typed lines, and keep a rolling speech window. Each request asks Jev which described item
+  fits the latest sentence and the broader thread (two Choice questions), whether anything fits
+  (Noul), and whether the thought on screen continues (Noul). `src/lib/echo.ts` turns those
+  answers into the frame with the folder's relevance, recency and continuity weights and minimum
+  hold, and `EchoStage` renders it in Presentation, Backdrop or Spatial.
 - **Jev** calls go to `POST /api/jev`. TypeSafe does not accept browser origins, so the Worker
   forwards the request with the user's own key and stores nothing. Only signed-in sessions can
   use the relay. Settings checks a key with one small request before saving it.
