@@ -23,8 +23,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { MosaicDemo } from "@/components/mosaic-demo";
+import { FrameWalkthrough } from "@/components/frame-walkthrough";
 import { version } from "../package.json";
+import { modes } from "@/lib/presentation";
+import { PresentationStage } from "@/components/presentation-stage";
 
 // The login flow will be connected here. Deliberately inert for this landing-page PR.
 function LaunchButton({ compact = false }: { compact?: boolean }) {
@@ -58,58 +60,58 @@ const rules = [
   {
     id: "relevance",
     label: "01 / Relevance",
-    title: "Match the meaning. Find the material.",
+    title: "Surface the idea, not every keyword.",
     description:
-      "The current topic and your asset tags narrow the library to images that belong in this moment. A passing word is a signal; the surrounding thought gives it meaning.",
+      "Your recent speech and tagged material identify the main thought. The selected mode decides whether that thought becomes a slide, a background, or a cluster of connected context.",
     transcript:
-      "We left the city behind. Up here, the mountain trail is the only thing on my mind.",
-    tags: ["mountain trail", "hiking", "landscape"],
-    file: "mountains",
-    alt: "Mountain landscape selected for a story about a trail",
-    decision: "Promote the mountain image",
+      "Look past the trees for a moment. A forest is a living water system, connecting the soil beneath our feet with the air above us.",
+    tags: ["forest", "water cycle", "main idea"],
+    mode: "presentation" as const,
+    sceneIndex: 0,
+    decision: "Give the main idea a clear hierarchy",
     detail:
-      "The current thought takes priority over a passing mention of the city.",
+      "In Presentation mode, one headline and one focal visual establish the point.",
   },
   {
     id: "recency",
     label: "02 / Recency",
-    title: "Give the latest thought more weight.",
+    title: "Bring the explanation forward.",
     description:
-      "A rolling transcript window keeps the frame close to what you are saying now. As older context falls away, the next topic can take the lead without a slide transition.",
+      "As the speaker moves from a subject to a mechanism, the current explanation deserves more emphasis. Promote the relevant note or diagram while retaining the context that still helps.",
     transcript:
-      "That was the mountain climb. But what I remember most is the waterfall we found on the way back.",
-    tags: ["waterfall", "water", "return journey"],
-    file: "waterfall",
-    alt: "Waterfall selected as the speaker moves to a new topic",
-    decision: "Let the waterfall take the lead",
+      "Roots take up water from the soil, and leaves release it into the air as vapor. That process is called transpiration.",
+    tags: ["transpiration", "explanation", "shift focus"],
+    mode: "spatial" as const,
+    sceneIndex: 1,
+    decision: "Promote the mechanism; retain the forest",
     detail:
-      "The new subject becomes the focal image. The previous scene can stay as context.",
+      "In Spatial mode, the explanation moves into focus and the visual becomes supporting context.",
   },
   {
     id: "continuity",
     label: "03 / Continuity",
-    title: "Change with purpose. Give images time.",
+    title: "Sometimes the right move is to hold.",
     description:
-      "Selection is only half the job. Hold useful images while the topic develops, limit repeated assets, and replace a frame when the new context gives a good reason to change it.",
+      "A new sentence doesn’t always need a new composition. Let the speaker develop a thought, keep relevant context stable, and change the frame when the subject gives a reason to.",
     transcript:
-      "There’s something about that forest. The stillness, the green, the light coming through the trees…",
-    tags: ["same subject", "more detail", "hold frame"],
-    file: "forest",
-    alt: "Forest image retained while the speaker elaborates on the same subject",
-    decision: "Keep the forest in focus",
+      "Here’s the part we don’t see: roots take up water from the soil, and leaves release it into the air as vapor.",
+    tags: ["same subject", "more detail", "hold background"],
+    mode: "backdrop" as const,
+    sceneIndex: 1,
+    decision: "Keep the scene. Give the speaker space.",
     detail:
-      "A new sentence does not need a new image. Let the frame support the thought.",
+      "In Backdrop mode, the forest stays on screen as the speaker explains the process.",
   },
 ];
 
 const faqs = [
   [
     "What do I need for a live demo?",
-    "Your own Jev API key, a microphone, and a library of images. Live demos and presentation sessions require a Jev key; API usage is billed to your TypeSafe account. The frame walkthrough on this page illustrates how a session flows.",
+    "Your own Jev API key, a microphone, and your presentation material. Live demos and presentation sessions require a Jev key; API usage is billed to your TypeSafe account. The frame walkthrough on this page illustrates how a session flows.",
   ],
   [
     "What actually drives the frame?",
-    "Your recent speech provides the context. EchoFrame combines that transcript with your library’s asset tags. Jev returns structured choices and scores; EchoFrame’s heuristics turn those signals into image selection and arrangement. Relevance, recency, and continuity guide what enters the frame, what stays, and what takes the lead.",
+    "Your recent speech provides the context. EchoFrame combines that transcript with your tagged material and the selected presentation mode. Jev returns structured choices and scores; EchoFrame’s heuristics turn those signals into content selection, emphasis, and arrangement. Relevance, recency, and continuity guide what enters the frame, what stays, and what takes the lead.",
   ],
   [
     "Why use a rolling transcript window?",
@@ -120,8 +122,8 @@ const faqs = [
     "That is the point. Follow a question, return to an earlier idea, or take an unexpected detour. Your library is a pool of material, not a sequence of slides. The current context and selection rules drive the composition.",
   ],
   [
-    "Does EchoFrame create new images?",
-    "EchoFrame creates the composition from your assets. Add images to folders, let tags make them searchable, and use your voice to bring relevant material into the frame. Your library supplies the visuals; Jev guides their selection and arrangement.",
+    "How do the three modes differ?",
+    "Presentation gives your talk the hierarchy of a keynote: a main idea, supporting visuals, and a composed slide. Backdrop uses one visual and keeps the stage clear. Spatial assembles connected images, explanations, and relationships around what you are saying. The mode guides the layout; your voice drives the content.",
   ],
 ];
 
@@ -190,9 +192,9 @@ export function App() {
                   </span>
                 </h1>
                 <p className="mt-7 text-base leading-relaxed text-muted-foreground xl:text-lg">
-                  A slide deck decides what comes next. An echoframe follows
-                  where you go. Your voice, your visual library, and a set of
-                  heuristics become a living composition.
+                  A keynote, a quiet backdrop, or a spatial canvas of supporting
+                  context. Your voice decides what comes next. Your mode decides
+                  how it appears.
                 </p>
                 <div className="mt-8 flex flex-wrap items-center gap-3">
                   <LaunchButton />
@@ -220,7 +222,7 @@ export function App() {
               </div>
             </div>
             <div className="min-w-0 bg-[#171e18] p-3 pt-7 sm:p-6 sm:pt-8 xl:p-9 xl:pt-10">
-              <MosaicDemo />
+              <FrameWalkthrough />
             </div>
           </section>
 
@@ -248,6 +250,58 @@ export function App() {
           </section>
 
           <section
+            id="modes"
+            aria-labelledby="modes-heading"
+            className="border-b"
+          >
+            <div className="flex flex-col justify-between gap-5 px-5 pt-14 pb-8 sm:px-8 md:flex-row md:items-end xl:px-12">
+              <div>
+                <p className="text-[10px] tracking-[0.2em] text-primary uppercase">
+                  Choose your presence
+                </p>
+                <h2
+                  id="modes-heading"
+                  className="mt-4 text-3xl font-medium tracking-[-0.045em] sm:text-5xl"
+                >
+                  One voice. More than one canvas.
+                </h2>
+              </div>
+              <Button
+                asChild
+                variant="link"
+                className="h-auto justify-start self-start p-0 text-xs text-primary md:self-end"
+              >
+                <a href="#frame">
+                  Compare the modes <ArrowRight className="size-3.5" />
+                </a>
+              </Button>
+            </div>
+            <div className="grid md:grid-cols-3">
+              {modes.map((mode, index) => (
+                <Card
+                  key={mode.id}
+                  className="gap-0 rounded-none border-x-0 border-b-0 bg-transparent py-0 shadow-none md:border-r md:last:border-r-0"
+                >
+                  <CardContent className="px-5 py-8 sm:px-8 xl:px-12">
+                    <p className="text-[10px] tracking-widest text-muted-foreground">
+                      0{index + 1} / {mode.name.toUpperCase()}
+                    </p>
+                    <h3 className="mt-4 text-xl font-medium tracking-tight">
+                      {mode.label}
+                    </h3>
+                    <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                      {mode.description}
+                    </p>
+                    <p className="mt-5 border-l border-primary/30 pl-3 text-xs leading-6 text-primary/80">
+                      {mode.rule}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+
+          <section
             id="heuristics"
             aria-labelledby="engine-heading"
             className="w-full scroll-mt-6"
@@ -271,10 +325,10 @@ export function App() {
               <div className="flex flex-col justify-center px-5 pb-12 sm:px-8 lg:py-20 xl:px-12">
                 <p className="text-base leading-8 text-muted-foreground">
                   EchoFrame listens to a rolling window of recent speech. That
-                  context meets your tagged assets and selection rules. Jev
-                  evaluates small, specific questions against that context.
-                  EchoFrame turns the resulting choices and scores into the
-                  composition.
+                  context meets your tagged material, selected mode, and
+                  selection rules. Jev evaluates small, specific questions
+                  against that context. EchoFrame turns the resulting choices
+                  and scores into the composition.
                 </p>
                 <p className="mt-4 text-sm leading-7 text-foreground/80">
                   The loop keeps running as you talk: understand the current
@@ -303,14 +357,14 @@ export function App() {
                   label: "03 / SELECT",
                   title: "Heuristics + Jev",
                   detail:
-                    "Score relevant assets, choose a focal image, and decide whether the context warrants a change.",
+                    "Score relevant material, select the main idea, and decide whether the context warrants a change.",
                 },
                 {
                   icon: Layers3,
                   label: "04 / COMPOSE",
                   title: "A living frame",
                   detail:
-                    "Choose the focal image, keep useful context, and rearrange as the story moves.",
+                    "Compose a slide, hold a background, or assemble connected context according to the selected mode.",
                 },
               ].map(({ icon: Icon, label, title, detail }) => (
                 <div
@@ -346,9 +400,9 @@ export function App() {
                   Freedom for the speaker.
                 </h3>
                 <p className="mt-5 text-sm leading-7 text-muted-foreground">
-                  The important decision isn’t just which image matches a word.
-                  It’s whether that image belongs now, whether it deserves the
-                  focus, and when the frame should stay still.
+                  Choose what supports the current thought, how much context the
+                  audience needs, and what deserves the focus. The same
+                  selection logic composes differently in each mode.
                 </p>
                 <p className="mt-4 text-xs leading-6 text-muted-foreground">
                   Jev supplies typed decisions: Choice selects an option, Score
@@ -424,11 +478,9 @@ export function App() {
                         </CardContent>
                       </Card>
                       <div className="min-w-0">
-                        <img
-                          src={`/images/${rule.file}.webp`}
-                          alt={rule.alt}
-                          loading="lazy"
-                          className="h-36 w-full rounded-lg object-cover xl:h-44"
+                        <PresentationStage
+                          mode={rule.mode}
+                          sceneIndex={rule.sceneIndex}
                         />
                         <p className="mt-4 flex items-center gap-2 text-xs font-semibold text-primary">
                           <Check className="size-3.5 shrink-0" />
@@ -462,9 +514,7 @@ export function App() {
                 <br />
                 Your library.
                 <br />
-                <span className="text-primary">
-                  Your Jev key.
-                </span>
+                <span className="text-primary">Your Jev key.</span>
               </h2>
               <p className="mt-7 text-base leading-8 text-foreground/75">
                 Live demos and presentation sessions require your own Jev API
@@ -584,9 +634,7 @@ export function App() {
             >
               Lose the line.
               <br />
-              <span className="text-primary">
-                Keep the story.
-              </span>
+              <span className="text-primary">Keep the story.</span>
             </h2>
             <div className="md:max-w-sm">
               <p className="text-sm leading-7 text-muted-foreground">

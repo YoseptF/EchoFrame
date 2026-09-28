@@ -29,9 +29,12 @@ photographs. `bun run dev` builds the frontend and serves it through Wrangler; e
 plugin. Wrangler runs that build automatically for previews and deployments, then serves the
 output through Workers Static Assets. `/version` continues to return the running package version.
 
-The landing page explains the product through a full-width layout, an illustrated frame walkthrough,
-and interactive examples of relevance, recency, and continuity heuristics. The walkthrough uses
-scripted transcripts and bundled images; it is separate from live presentation sessions.
+The landing page explains the product through a full-width layout, an illustrated presentation walkthrough,
+and interactive examples of relevance, recency, and continuity heuristics. The same authored talk is rendered in three modes: Presentation (composed slides), Backdrop
+(one full-bleed visual), and Spatial (linked visual, explanation, and relationship panels). Mode
+switches preserve the current thought. Playback advances through three scenes and stops at the end;
+direct jumps between thoughts, previous/next, restart, and expanded-stage controls also work without playback. Spatial has a compact
+layout for narrow containers. The walkthrough is separate from live presentation sessions.
 
 Live-session messaging explicitly requires the visitor's own Jev API key. The **Launch EchoFrame**
 buttons intentionally have no action until the login flow is added. No credentials are collected,
@@ -39,7 +42,9 @@ no microphone is accessed, and no Jev calls are made by this page. Official link
 [TypeSafe's key dashboard](https://console.typesafe.ai/keys) and
 [Jev's quickstart](https://docs.typesafe.ai/introduction/quickstart).
 
-Story content lives in `src/lib/stories.ts`; UI components can be added with
+Mode and scene content lives in `src/lib/presentation.ts`; renderers live in
+`src/components/presentation-stage.tsx`. The forest/water-cycle example links its scientific
+reference to USGS Water Science. UI components can be added with
 `bunx shadcn add <component>`. Photo sources are listed in `public/images/README.md`.
 
 ## How changes ship
