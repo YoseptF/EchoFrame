@@ -168,6 +168,22 @@ export function PrivacyPolicy() {
         </p>
       </Section>
 
+      <Section title="Live sessions and your microphone">
+        <p>
+          A live session listens only after you choose “Start listening”, and
+          stops when you stop it or leave the session. EchoFrame uses your
+          browser’s built-in speech recognition to turn speech into text. Your
+          browser may send the audio to its maker to do this, for example Google
+          for Chrome or Apple for Safari, under that company’s own privacy
+          terms. EchoFrame never receives or records the audio.
+        </p>
+        <p>
+          The resulting transcript stays in the page while the session is open
+          and is not saved. The last few seconds of it are sent to Jev, as
+          described above, to choose what the frame shows.
+        </p>
+      </Section>
+
       <Section title="Hosting and logs">
         <p>
           EchoFrame runs on Cloudflare. Like any website, Cloudflare processes

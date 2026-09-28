@@ -12,6 +12,8 @@ test("the privacy policy matches what sign-in actually does", () => {
   expect(text).toContain("Limited Use requirements");
   expect(text).toContain("myaccount.google.com/connections");
   expect(text).toContain("mailto:yosept.flores@gmail.com");
+  // The live session's button carries the same words the policy promises.
+  expect(text).toContain("“Start listening”");
 });
 
 test("both legal pages link to each other", () => {
