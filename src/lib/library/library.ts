@@ -36,8 +36,8 @@ export type EchoConfig = {
 
 export const defaultEchoConfig: EchoConfig = {
   mode: "spatial",
-  windowSeconds: 20,
-  holdSeconds: 6,
+  windowSeconds: 12,
+  holdSeconds: 3,
   weights: { relevance: 70, recency: 20, continuity: 50 },
   language: "en-US",
 };

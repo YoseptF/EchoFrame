@@ -45,7 +45,7 @@ const heuristics = [
     id: "recency",
     name: "Recency",
     description:
-      "Favor your latest sentence over the broader thread of the talk.",
+      "How much your latest sentence outweighs the rest of the speech window while you stay on one thought. When you change subject, the latest sentence leads.",
   },
   {
     id: "continuity",
@@ -196,7 +196,7 @@ export function EchoConfigForm({ folder }: { folder: Folder }) {
             <SliderField
               id="hold-seconds"
               label="Minimum hold"
-              description="The shortest time a frame stays up before it can change."
+              description="The shortest time a frame stays up before it can change. A clear change of subject can cut it short."
               value={config.holdSeconds}
               min={1}
               max={60}
