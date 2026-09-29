@@ -8,6 +8,10 @@ export type AuthEnv = {
   SESSION_SECRET?: string;
   /** The public origin, when the request URL doesn't show it (wrangler dev reports the route host). */
   APP_ORIGIN?: string;
+  /** The origin whose callback is registered with Google. PR previews sign in through it. */
+  SIGN_IN_ORIGIN?: string;
+  /** Preview aliases live at `https://pr-<n>-<PREVIEW_HOST>`; only those may borrow the sign-in. */
+  PREVIEW_HOST?: string;
   // Overrides for local tests against fake endpoints.
   GOOGLE_AUTH_URL?: string;
   GOOGLE_TOKEN_URL?: string;
@@ -26,8 +30,13 @@ type Session = SessionUser & { exp: number };
 
 const sessionCookie = "ef_session";
 const stateCookie = "ef_oauth_state";
+// On the sign-in origin: which preview asked, and the nonce it holds.
+const returnCookie = "ef_oauth_return";
+// On a preview: the nonce a handoff must carry to be accepted here.
+const handoffCookie = "ef_handoff";
 export const sessionSeconds = 60 * 60 * 24 * 30;
 const stateSeconds = 60 * 10;
+const handoffSeconds = 60;
 
 export const googleAvailable = (env: AuthEnv) =>
   Boolean(
@@ -36,6 +45,27 @@ export const googleAvailable = (env: AuthEnv) =>
 
 const appOrigin = (request: Request, env: AuthEnv) =>
   env.APP_ORIGIN ?? new URL(request.url).origin;
+
+/** A PR preview alias of this Worker, such as https://pr-6-echoframe-staging.example.workers.dev. */
+export function isPreviewOrigin(
+  origin: string | null | undefined,
+  env: AuthEnv,
+) {
+  if (!origin || !env.PREVIEW_HOST) return false;
+  try {
+    const url = new URL(origin);
+    return (
+      url.protocol === "https:" &&
+      url.origin === origin &&
+      /^pr-\d+-/.test(url.host) &&
+      url.host.replace(/^pr-\d+-/, "") === env.PREVIEW_HOST
+    );
+  } catch {
+    return false;
+  }
+}
+
+const randomToken = () => base64url(crypto.getRandomValues(new Uint8Array(24)));
 
 const encoder = new TextEncoder();
 
@@ -60,29 +90,22 @@ function hmacKey(secret: string) {
   );
 }
 
-export async function signSession(
-  user: SessionUser,
-  secret: string,
-  now = Date.now(),
-) {
-  const payload = base64url(
-    encoder.encode(
-      JSON.stringify({ ...user, exp: Math.floor(now / 1000) + sessionSeconds }),
-    ),
-  );
+async function sign(payload: object, secret: string) {
+  const body = base64url(encoder.encode(JSON.stringify(payload)));
   const signature = await crypto.subtle.sign(
     "HMAC",
     await hmacKey(secret),
-    encoder.encode(payload),
+    encoder.encode(body),
   );
-  return `${payload}.${base64url(signature)}`;
+  return `${body}.${base64url(signature)}`;
 }
 
-export async function verifySession(
+/** The payload of an untampered, unexpired token. */
+async function verify<T extends { exp: number }>(
   token: string | undefined,
   secret: string,
-  now = Date.now(),
-): Promise<SessionUser | null> {
+  now: number,
+): Promise<T | null> {
   const [payload, signature, extra] = token?.split(".") ?? [];
   if (!payload || !signature || extra !== undefined) return null;
   try {
@@ -93,20 +116,76 @@ export async function verifySession(
       encoder.encode(payload),
     );
     if (!valid) return null;
-    const session = JSON.parse(
+    const data = JSON.parse(
       new TextDecoder().decode(fromBase64url(payload)),
-    ) as Session;
-    if (typeof session.exp !== "number" || session.exp * 1000 <= now)
-      return null;
-    return {
-      id: session.id,
-      name: session.name,
-      email: session.email,
-      picture: session.picture,
-    };
+    ) as T;
+    if (typeof data.exp !== "number" || data.exp * 1000 <= now) return null;
+    return data;
   } catch {
     return null;
   }
+}
+
+const userOf = ({ id, name, email, picture }: SessionUser): SessionUser => ({
+  id,
+  name,
+  email,
+  picture,
+});
+
+export function signSession(
+  user: SessionUser,
+  secret: string,
+  now = Date.now(),
+) {
+  return sign(
+    { ...userOf(user), exp: Math.floor(now / 1000) + sessionSeconds },
+    secret,
+  );
+}
+
+export async function verifySession(
+  token: string | undefined,
+  secret: string,
+  now = Date.now(),
+): Promise<SessionUser | null> {
+  const session = await verify<Session & { aud?: string }>(token, secret, now);
+  // A handoff token is not a session, even though the same secret signs both.
+  return session && session.aud === undefined ? userOf(session) : null;
+}
+
+type Handoff = Session & { aud: string; nonce: string };
+
+/** A one-minute pass that signs a user in on one preview origin holding `nonce`. */
+export function signHandoff(
+  user: SessionUser,
+  aud: string,
+  nonce: string,
+  secret: string,
+  now = Date.now(),
+) {
+  return sign(
+    {
+      ...userOf(user),
+      aud,
+      nonce,
+      exp: Math.floor(now / 1000) + handoffSeconds,
+    },
+    secret,
+  );
+}
+
+export async function verifyHandoff(
+  token: string | undefined,
+  aud: string,
+  nonce: string | undefined,
+  secret: string,
+  now = Date.now(),
+): Promise<SessionUser | null> {
+  const handoff = await verify<Handoff>(token, secret, now);
+  if (!handoff || !nonce || handoff.aud !== aud || handoff.nonce !== nonce)
+    return null;
+  return userOf(handoff);
 }
 
 function readCookie(request: Request, name: string) {
@@ -142,11 +221,23 @@ const signInError = (
   env: AuthEnv,
   reason: string,
   cookies: string[] = [],
-) =>
-  redirect(
-    new URL(`/app/sign-in?error=${reason}`, appOrigin(request, env)),
-    cookies,
-  );
+  origin = appOrigin(request, env),
+) => redirect(new URL(`/app/sign-in?error=${reason}`, origin), cookies);
+
+/** The preview a sign-in on this origin was started for, if any. */
+function returnTarget(request: Request, env: AuthEnv) {
+  const value = readCookie(request, returnCookie);
+  if (!value) return null;
+  try {
+    const target = JSON.parse(new TextDecoder().decode(fromBase64url(value)));
+    return isPreviewOrigin(target?.origin, env) &&
+      typeof target.nonce === "string"
+      ? (target as { origin: string; nonce: string })
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function currentUser(request: Request, env: AuthEnv) {
   if (!env.SESSION_SECRET) return null;
@@ -155,20 +246,49 @@ export async function currentUser(request: Request, env: AuthEnv) {
 
 function startGoogle(request: Request, env: AuthEnv) {
   if (!googleAvailable(env)) return signInError(request, env, "unavailable");
-  const state = base64url(crypto.getRandomValues(new Uint8Array(24)));
-  const url = new URL(
+  const url = new URL(request.url);
+
+  // A PR preview can't be registered with Google, so it signs in through the sign-in origin and
+  // keeps a nonce that the handoff back must carry.
+  if (env.SIGN_IN_ORIGIN && isPreviewOrigin(url.origin, env)) {
+    const nonce = randomToken();
+    const target = new URL("/auth/google", env.SIGN_IN_ORIGIN);
+    target.searchParams.set("return", url.origin);
+    target.searchParams.set("nonce", nonce);
+    return redirect(target, [
+      cookie(request, env, handoffCookie, nonce, stateSeconds),
+    ]);
+  }
+
+  const cookies: string[] = [];
+  const returnTo = url.searchParams.get("return");
+  const nonce = url.searchParams.get("nonce");
+  if (returnTo !== null) {
+    if (!isPreviewOrigin(returnTo, env) || !nonce)
+      return signInError(request, env, "state");
+    const target = encoder.encode(JSON.stringify({ origin: returnTo, nonce }));
+    cookies.push(
+      cookie(request, env, returnCookie, base64url(target), stateSeconds),
+    );
+  } else if (readCookie(request, returnCookie))
+    // A plain sign-in must not finish an abandoned preview sign-in.
+    cookies.push(cookie(request, env, returnCookie, "", 0));
+
+  const state = randomToken();
+  const google = new URL(
     env.GOOGLE_AUTH_URL ?? "https://accounts.google.com/o/oauth2/v2/auth",
   );
-  url.searchParams.set("client_id", env.GOOGLE_CLIENT_ID!);
-  url.searchParams.set(
+  google.searchParams.set("client_id", env.GOOGLE_CLIENT_ID!);
+  google.searchParams.set(
     "redirect_uri",
     new URL("/auth/google/callback", appOrigin(request, env)).href,
   );
-  url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "openid profile email");
-  url.searchParams.set("prompt", "select_account");
-  url.searchParams.set("state", state);
-  return redirect(url, [
+  google.searchParams.set("response_type", "code");
+  google.searchParams.set("scope", "openid profile email");
+  google.searchParams.set("prompt", "select_account");
+  google.searchParams.set("state", state);
+  return redirect(google, [
+    ...cookies,
     cookie(request, env, stateCookie, state, stateSeconds),
   ]);
 }
@@ -184,13 +304,18 @@ type GoogleProfile = {
 async function finishGoogle(request: Request, env: AuthEnv) {
   if (!googleAvailable(env)) return signInError(request, env, "unavailable");
   const url = new URL(request.url);
-  const clearState = cookie(request, env, stateCookie, "", 0);
+  const target = returnTarget(request, env);
+  const clear = [
+    cookie(request, env, stateCookie, "", 0),
+    ...(target ? [cookie(request, env, returnCookie, "", 0)] : []),
+  ];
+  const fail = (reason: string) =>
+    signInError(request, env, reason, clear, target?.origin);
   const state = url.searchParams.get("state");
   const code = url.searchParams.get("code");
-  if (url.searchParams.get("error"))
-    return signInError(request, env, "cancelled", [clearState]);
+  if (url.searchParams.get("error")) return fail("cancelled");
   if (!code || !state || state !== readCookie(request, stateCookie))
-    return signInError(request, env, "state", [clearState]);
+    return fail("state");
 
   const token = await fetch(
     env.GOOGLE_TOKEN_URL ?? "https://oauth2.googleapis.com/token",
@@ -210,7 +335,7 @@ async function finishGoogle(request: Request, env: AuthEnv) {
   const { access_token } = token.ok
     ? ((await token.json()) as { access_token?: string })
     : {};
-  if (!access_token) return signInError(request, env, "google", [clearState]);
+  if (!access_token) return fail("google");
 
   const profileResponse = await fetch(
     env.GOOGLE_USERINFO_URL ??
@@ -220,7 +345,7 @@ async function finishGoogle(request: Request, env: AuthEnv) {
   const profile = profileResponse.ok
     ? ((await profileResponse.json()) as GoogleProfile)
     : {};
-  if (!profile.sub) return signInError(request, env, "google", [clearState]);
+  if (!profile.sub) return fail("google");
 
   const email = profile.email_verified && profile.email ? profile.email : null;
   const user: SessionUser = {
@@ -229,8 +354,42 @@ async function finishGoogle(request: Request, env: AuthEnv) {
     email,
     picture: profile.picture ?? null,
   };
+  if (target) {
+    const handoff = new URL("/auth/handoff", target.origin);
+    handoff.searchParams.set(
+      "token",
+      await signHandoff(user, target.origin, target.nonce, env.SESSION_SECRET!),
+    );
+    return redirect(handoff, clear);
+  }
   return redirect(new URL("/app/", appOrigin(request, env)), [
-    clearState,
+    ...clear,
+    cookie(
+      request,
+      env,
+      sessionCookie,
+      await signSession(user, env.SESSION_SECRET!),
+      sessionSeconds,
+    ),
+  ]);
+}
+
+/** A preview accepts the sign-in finished on the sign-in origin. */
+async function finishHandoff(request: Request, env: AuthEnv) {
+  const url = new URL(request.url);
+  const clear = cookie(request, env, handoffCookie, "", 0);
+  const user =
+    env.SESSION_SECRET && isPreviewOrigin(url.origin, env)
+      ? await verifyHandoff(
+          url.searchParams.get("token") ?? undefined,
+          url.origin,
+          readCookie(request, handoffCookie),
+          env.SESSION_SECRET,
+        )
+      : null;
+  if (!user) return signInError(request, env, "state", [clear]);
+  return redirect(new URL("/app/", url.origin), [
+    clear,
     cookie(
       request,
       env,
@@ -265,6 +424,8 @@ export async function handleAuth(request: Request, env: AuthEnv) {
       return startGoogle(request, env);
     case "/auth/google/callback":
       return finishGoogle(request, env);
+    case "/auth/handoff":
+      return finishHandoff(request, env);
     case "/auth/sign-out":
       return signOut(request, env);
     case "/api/session":

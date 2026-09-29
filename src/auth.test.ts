@@ -1,5 +1,13 @@
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
-import { handleAuth, signSession, verifySession, type AuthEnv } from "./auth";
+import {
+  handleAuth,
+  isPreviewOrigin,
+  signHandoff,
+  signSession,
+  verifyHandoff,
+  verifySession,
+  type AuthEnv,
+} from "./auth";
 
 afterEach(() => mock.restore());
 
@@ -187,4 +195,129 @@ test("signing out clears the session and refuses cross-site posts", async () => 
   expect(
     (await handleAuth(new Request(`${origin}/auth/sign-out`), env))!.status,
   ).toBe(405);
+});
+
+const staging = "https://echoframe-staging.yosept.me";
+const preview = "https://pr-7-echoframe-staging.example.workers.dev";
+const previewEnv: AuthEnv = {
+  ...env,
+  SIGN_IN_ORIGIN: staging,
+  PREVIEW_HOST: "echoframe-staging.example.workers.dev",
+};
+
+test("only this Worker's PR preview aliases count as previews", () => {
+  expect(isPreviewOrigin(preview, previewEnv)).toBe(true);
+  for (const origin of [
+    staging,
+    "http://pr-7-echoframe-staging.example.workers.dev",
+    "https://pr-x-echoframe-staging.example.workers.dev",
+    "https://pr-7-echoframe-staging.example.workers.dev.evil.example",
+    "https://pr-7-evil.example",
+    `${preview}/path`,
+    "not a url",
+  ])
+    expect(isPreviewOrigin(origin, previewEnv)).toBe(false);
+  expect(isPreviewOrigin(preview, env)).toBe(false);
+});
+
+test("a preview signs in through the sign-in origin and gets its own session", async () => {
+  // The preview sends the visitor to staging, keeping a nonce.
+  const start = (await handleAuth(
+    new Request(`${preview}/auth/google`),
+    previewEnv,
+  ))!;
+  const toStaging = new URL(start.headers.get("Location")!);
+  expect(toStaging.origin + toStaging.pathname).toBe(`${staging}/auth/google`);
+  expect(toStaging.searchParams.get("return")).toBe(preview);
+  const nonce = toStaging.searchParams.get("nonce")!;
+  expect(cookieValue(start, "ef_handoff")).toBe(nonce);
+
+  // Staging runs the usual Google flow with its own registered callback.
+  const stagingStart = (await handleAuth(new Request(toStaging), previewEnv))!;
+  const google = new URL(stagingStart.headers.get("Location")!);
+  expect(google.searchParams.get("redirect_uri")).toBe(
+    `${staging}/auth/google/callback`,
+  );
+  const state = google.searchParams.get("state")!;
+  const returnTo = cookieValue(stagingStart, "ef_oauth_return")!;
+
+  spyOn(globalThis, "fetch").mockImplementation((async (
+    input: RequestInfo | URL,
+  ) =>
+    String(input).includes("token")
+      ? Response.json({ access_token: "google-token" })
+      : Response.json({
+          sub: "1234",
+          name: "Ada Lovelace",
+          email: "ada@example.com",
+          email_verified: true,
+        })) as typeof fetch);
+  const callback = (await handleAuth(
+    new Request(`${staging}/auth/google/callback?code=abc&state=${state}`, {
+      headers: {
+        Cookie: `ef_oauth_state=${state}; ef_oauth_return=${returnTo}`,
+      },
+    }),
+    previewEnv,
+  ))!;
+  // Staging signs nobody in itself; it hands a one-minute token back to the preview.
+  expect(cookieValue(callback, "ef_session")).toBeUndefined();
+  expect(cookieValue(callback, "ef_oauth_return")).toBe("");
+  const back = new URL(callback.headers.get("Location")!);
+  expect(back.origin + back.pathname).toBe(`${preview}/auth/handoff`);
+
+  const handoff = (await handleAuth(
+    new Request(back, { headers: { Cookie: `ef_handoff=${nonce}` } }),
+    previewEnv,
+  ))!;
+  expect(handoff.headers.get("Location")).toBe(`${preview}/app/`);
+  const session = cookieValue(handoff, "ef_session")!;
+  expect(await verifySession(session, "session-secret")).toEqual(ada);
+
+  // The same token is useless without the nonce the preview kept.
+  const stolen = (await handleAuth(new Request(back), previewEnv))!;
+  expect(stolen.headers.get("Location")).toBe(
+    `${preview}/app/sign-in?error=state`,
+  );
+  expect(cookieValue(stolen, "ef_session")).toBeUndefined();
+});
+
+test("the sign-in origin refuses to return to anything but a preview", async () => {
+  const response = (await handleAuth(
+    new Request(
+      `${staging}/auth/google?return=${encodeURIComponent("https://evil.example")}&nonce=n`,
+    ),
+    previewEnv,
+  ))!;
+  expect(response.headers.get("Location")).toBe(
+    `${staging}/app/sign-in?error=state`,
+  );
+});
+
+test("handoff tokens are bound to one preview and nonce, expire, and are not sessions", async () => {
+  const token = await signHandoff(ada, preview, "nonce", "secret", 0);
+  expect(
+    await verifyHandoff(token, preview, "nonce", "secret", 30_000),
+  ).toEqual(ada);
+  expect(await verifyHandoff(token, preview, "other", "secret", 0)).toBeNull();
+  expect(
+    await verifyHandoff(token, "https://pr-8-x.example", "nonce", "secret", 0),
+  ).toBeNull();
+  expect(
+    await verifyHandoff(token, preview, "nonce", "secret", 61_000),
+  ).toBeNull();
+  expect(await verifySession(token, "secret", 0)).toBeNull();
+});
+
+test("a failed preview sign-in returns to the preview with the reason", async () => {
+  const returnTo = btoa(JSON.stringify({ origin: preview, nonce: "n" }));
+  const cancelled = (await handleAuth(
+    new Request(`${staging}/auth/google/callback?error=access_denied&state=s`, {
+      headers: { Cookie: `ef_oauth_state=s; ef_oauth_return=${returnTo}` },
+    }),
+    previewEnv,
+  ))!;
+  expect(cancelled.headers.get("Location")).toBe(
+    `${preview}/app/sign-in?error=cancelled`,
+  );
 });
