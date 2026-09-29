@@ -153,12 +153,27 @@ export function readJudgments(
 
 export type Ranked = { id: string; score: number };
 
-/** Recency blends the latest sentence with the broader thread. */
+/** Below this, Jev says the latest sentence has left the thought on screen. */
+const movedOnBelow = 0.3;
+/** A clear change of subject may end the minimum hold this early. */
+const shortHoldSeconds = 1.5;
+
+const movedOn = (judgments: Judgments) =>
+  judgments.sameThought !== null && judgments.sameThought < movedOnBelow;
+
+/**
+ * Recency blends the latest sentence with the broader thread. The slider sets the blend while the
+ * speaker stays on one thought; once they move on, the older speech in the window describes the
+ * previous subject, so the latest sentence takes over.
+ */
 export function rank(
   judgments: Judgments,
   weights: EchoConfig["weights"],
 ): Ranked[] {
-  const recency = weights.recency / 100;
+  const recency = Math.max(
+    weights.recency / 100,
+    judgments.sameThought === null ? 0 : 1 - judgments.sameThought,
+  );
   return Object.keys(judgments.thread)
     .map((id) => ({
       id,
@@ -193,7 +208,12 @@ export const emptyFrame: Frame = {
 };
 
 export type Verdict =
-  "switched" | "same" | "pinned" | "holding" | "continuing" | "no-match";
+  | "switched"
+  | "same"
+  | "pinned"
+  | "holding"
+  | "continuing"
+  | "no-match";
 
 const retainedLimit = 3;
 
@@ -228,7 +248,13 @@ export function direct(
       (config.weights.continuity / 100) * (judgments.sameThought ?? 0) * 0.5;
     if (best.score <= current + hold)
       return { frame, verdict: "continuing", ranked };
-    const holdUntil = frame.since + config.holdSeconds * 1000;
+    // The hold stops the frame chasing keywords; a clear change of subject is not that.
+    const holdUntil =
+      frame.since +
+      (movedOn(judgments)
+        ? Math.min(config.holdSeconds, shortHoldSeconds)
+        : config.holdSeconds) *
+        1000;
     if (now < holdUntil)
       return { frame, verdict: "holding", ranked, retryAt: holdUntil };
   }

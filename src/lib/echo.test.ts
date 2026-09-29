@@ -174,3 +174,65 @@ test("the speech window keeps recent speech and the sentence in progress", () =>
     latest: "Forests move water. into the air",
   });
 });
+
+const defaults = {
+  holdSeconds: 6,
+  weights: { relevance: 70, recency: 20, continuity: 50 },
+};
+
+test("once the speaker moves on, the latest sentence leads whatever the recency slider says", () => {
+  // The window still holds the old subject; the latest sentence is about the new one.
+  const moved = judged({
+    latest: { forest: 0.1, river: 0.8 },
+    thread: { forest: 0.6, river: 0.3 },
+    sameThought: 0.05,
+  });
+  expect(rank(moved, defaults.weights)[0]?.id).toBe("river");
+  expect(rank({ ...moved, sameThought: 0.95 }, defaults.weights)[0]?.id).toBe(
+    "forest",
+  );
+});
+
+test("a clear change of subject cuts the minimum hold short", () => {
+  const frame = focusOn(emptyFrame, "forest", 0);
+  const moved = judged({ latest: { forest: 0.1, river: 0.9 } });
+  expect(
+    direct(frame, { ...moved, sameThought: 0.05 }, defaults, 2000).verdict,
+  ).toBe("switched");
+  expect(
+    direct(frame, { ...moved, sameThought: 0.05 }, defaults, 1000),
+  ).toMatchObject({ verdict: "holding", retryAt: 1500 });
+});
+
+test("talking at a normal pace, each change of subject lands on the next sentence", () => {
+  const subjects = [
+    "comics",
+    "comics",
+    "iron man",
+    "iron man",
+    "disney",
+    "disney",
+  ];
+  const all = ["comics", "iron man", "disney"];
+  let frame = emptyFrame;
+  subjects.forEach((subject, index) => {
+    const previous = subjects[Math.max(0, index - 2)]!;
+    const fresh = index === 0 || subjects[index - 1] !== subject;
+    const spread = (main: string, second: string, a: number, b: number) =>
+      Object.fromEntries(
+        all.map((id) => [id, id === main ? a : id === second ? b : 0.05]),
+      );
+    const judgments: Judgments = {
+      latest: spread(subject, "", 0.85, 0),
+      // Right after a change the window is still mostly the previous subject.
+      thread: fresh
+        ? spread(previous, subject, 0.6, 0.3)
+        : spread(subject, previous, 0.6, 0.3),
+      fits: 0.95,
+      sameThought: frame.focus ? (frame.focus === subject ? 0.9 : 0.1) : null,
+    };
+    // One sentence every two and a half seconds, no pauses.
+    frame = direct(frame, judgments, defaults, index * 2500).frame;
+    expect(frame.focus).toBe(subject);
+  });
+});
