@@ -37,16 +37,16 @@ my-talk/
 }
 ```
 
-| Field                  | Required  | Meaning                                                                                                                                         |
-| ---------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `format`, `version`    | yes       | Always `"echoframe.folder"` and `1`.                                                                                                            |
-| `name`                 | no        | The folder's name when importing as a new folder. Ignored when adding to an existing folder.                                                    |
-| `config`               | no        | Echo settings for a new folder: `mode`, `windowSeconds`, `holdSeconds`, `weights`, `language`. Missing or invalid values fall back to defaults. |
-| `assets[].file`        | one of    | Path to an image, audio file, or `.txt`/`.md` note. The kind comes from the extension.                                                          |
-| `assets[].text`        | one of    | An inline note. Use this instead of `file` for short text.                                                                                      |
-| `assets[].name`        | no        | Display name. Defaults to the file name without its extension, or "Note".                                                                       |
-| `assets[].description` | for media | What the image or clip shows or says. **Jev matches speech against words, not pixels**: media without a description is never brought forward.   |
-| `assets[].tags`        | no        | Short lowercase topics. Duplicates and extra spaces are removed.                                                                                |
+| Field                  | Required  | Meaning                                                                                                                                                     |
+| ---------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `format`, `version`    | yes       | Always `"echoframe.folder"` and `1`.                                                                                                                        |
+| `name`                 | no        | The folder's name when importing as a new folder. Ignored when adding to an existing folder.                                                                |
+| `config`               | no        | Echo settings for a new folder: `mode`, `windowSeconds`, `holdSeconds`, `weights`, `language`. Missing or invalid values fall back to defaults.             |
+| `assets[].file`        | one of    | Path to an image, audio file, or `.txt`/`.md` note. The kind comes from the extension.                                                                      |
+| `assets[].text`        | one of    | An inline note. Use this instead of `file` for short text.                                                                                                  |
+| `assets[].name`        | no        | The title shown on stage, so write it for the audience ("Iron Man (2008)", not "img_3 poster"). Defaults to the file name without its extension, or "Note". |
+| `assets[].description` | for media | What the image or clip shows or says. **Jev matches speech against words, not pixels**: media without a description is never brought forward.               |
+| `assets[].tags`        | no        | Short lowercase topics. Duplicates and extra spaces are removed.                                                                                            |
 
 Other fields, such as `source` or `license` for attribution, are allowed and ignored.
 

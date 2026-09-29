@@ -51,7 +51,7 @@ const heuristics = [
     id: "continuity",
     name: "Continuity",
     description:
-      "Hold the current frame while the thought continues instead of chasing keywords.",
+      "How sure Jev must be that you’ve changed subject before the frame moves on. The frame never changes while you’re still on the same thought.",
   },
 ] as const;
 
@@ -196,7 +196,7 @@ export function EchoConfigForm({ folder }: { folder: Folder }) {
             <SliderField
               id="hold-seconds"
               label="Minimum hold"
-              description="The shortest time a frame stays up before it can change. A clear change of subject can cut it short."
+              description="The shortest time a frame stays up, so the audience can take it in before the next one."
               value={config.holdSeconds}
               min={1}
               max={60}
