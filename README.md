@@ -100,7 +100,10 @@ Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `SESSION_SECRET` as Worker s
 production and staging (`bunx wrangler secret put <NAME>` and `--env staging`). Locally, copy
 `.dev.vars.example` to `.dev.vars`; `APP_ORIGIN` is needed there because `wrangler dev` reports
 the production host. Without the Google values, sign-in shows as unavailable. PR preview URLs
-can't be registered with Google, so sign-in works on staging and production, not on previews.
+can't be registered with Google, so previews sign in through staging: `SIGN_IN_ORIGIN` and
+`PREVIEW_HOST` (staging `vars` in `wrangler.jsonc`) send a preview's sign-in to staging's
+registered callback, and staging hands back a one-minute token bound to that preview's origin and
+a nonce cookie the preview set. Only `https://pr-<n>-<PREVIEW_HOST>` origins are accepted.
 
 `/privacy` and `/terms` (`src/components/legal.tsx`) are rendered to static HTML during the build.
 Google requires the privacy policy URL before the OAuth app can be published. Keep both pages true

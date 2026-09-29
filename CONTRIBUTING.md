@@ -24,6 +24,10 @@ Every PR into `release` gets `https://pr-<n>-echoframe-staging.yosept-flores.wor
 on every push. It is a version of the staging Worker under a `pr-<n>` alias, nothing is deployed.
 Production never has version URLs; `preview_urls` is on for staging only.
 
+Google sign-in works on previews: "Continue with Google" goes through staging's registered callback
+and comes back to the preview signed in. That relies on the sign-in handoff being live on staging,
+so a PR opened before a change to it needs `release` merged in first.
+
 ## Bump rules
 
 Majors are launches, not bumps. No changeset picks `major` on its own; see [Launches](#launches).
