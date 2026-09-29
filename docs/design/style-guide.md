@@ -64,6 +64,8 @@ suggested new files.
 | App routes, sign-in, dashboard, folder, settings                                   | [src/app](../../src/app)                                                                                               | `routes.tsx` owns routing; `pages/` compose screens; `components/` holds app feature compositions                       |
 | App data and local storage                                                         | [library-context.tsx](../../src/app/library-context.tsx), [src/lib/library](../../src/lib/library)                     | Signed-in profile, `useLibraryData`/`useLibraryAction` hooks; `Library` model on a `FileStore`                          |
 | Jev requests                                                                       | [jev.ts](../../src/lib/jev.ts)                                                                                         | Typed client for the `/api/jev` relay and friendly error messages                                                       |
+| Live session: what Jev is asked and how the frame decides                          | [echo.ts](../../src/lib/echo.ts), [speech.ts](../../src/lib/speech.ts)                                                 | Candidates, the one-request question set, heuristics, minimum hold; browser speech recognition and the speech window    |
+| Live session screen and its frame                                                  | [live.tsx](../../src/app/pages/live.tsx), [echo-stage.tsx](../../src/app/components/echo-stage.tsx)                    | `LivePage` gates and controls; `useEchoSession` runs the ask loop; `EchoStage` renders the folder's material per mode   |
 | Shared colors, fonts, radii, base styles                                           | [src/styles.css](../../src/styles.css)                                                                                 | Tailwind v4 theme tokens and reduced-motion CSS                                                                         |
 | React mount, local font imports, effects provider                                  | [src/frontend.tsx](../../src/frontend.tsx)                                                                             | Manrope imports and the single top-level `EffectsProvider`                                                              |
 | Browser title, description, social metadata, favicon reference                     | [src/index.html](../../src/index.html)                                                                                 | HTML entry and metadata; keep it consistent with page copy                                                              |
@@ -269,6 +271,13 @@ signed-in pages do not run ambient effects.
   Say it once where it matters, not as a slogan on every screen.
 - **Words drive matching.** Jev reads descriptions and tags, not pixels. Keep the "needs a
   description" prompts visible for media, and never imply Jev sees images.
+- **Live sessions follow the frame contract.** `EchoStage` renders the folder's own material with
+  the same mode rules and art treatment as `PresentationStage`: Presentation is a slide built from
+  the focus item, Backdrop shows one image and never text, Spatial keeps retained and connected
+  items around the focus. Jev decides _which_ material; code decides _when_ (relevance threshold,
+  recency blend, continuity bias, minimum hold). Match percentages in the side panel are Jev's real
+  probabilities, never decoration. The microphone starts only from "Start listening", and typing a
+  line works everywhere as the fallback.
 - **Keys stay the user's.** The Jev key is stored in the profile and sent only through the
   `/api/jev` relay. Check a key before saving it and explain failures in plain words.
 - **Page anatomy.** Every signed-in page starts with `PageHeader` (sidebar trigger, breadcrumb,

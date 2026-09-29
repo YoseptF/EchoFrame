@@ -17,6 +17,7 @@ import { AppShell } from "./components/app-shell";
 import { LibraryProvider, useLibrary } from "./library-context";
 import { DashboardPage } from "./pages/dashboard";
 import { FolderPage } from "./pages/folder";
+import { LivePage } from "./pages/live";
 import { NotFoundPage } from "./pages/not-found";
 import { SettingsPage } from "./pages/settings";
 import { SignInPage } from "./pages/sign-in";
@@ -56,6 +57,7 @@ function SignedIn() {
     <AppShell key={profile.id}>
       <Switch>
         <Route path="/" component={DashboardPage} />
+        <Route path="/folders/:folderId/live" component={LivePage} />
         <Route path="/folders/:folderId" component={FolderPage} />
         <Route path="/settings" component={SettingsPage} />
         <Route component={NotFoundPage} />
