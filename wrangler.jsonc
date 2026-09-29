@@ -26,6 +26,12 @@
         { "pattern": "echoframe-staging.yosept.me", "custom_domain": true },
       ],
       "preview_urls": true,
+      // Previews can't be registered with Google, so they sign in through staging's callback and
+      // get a one-minute handoff back. Only `pr-<n>-<PREVIEW_HOST>` origins are accepted.
+      "vars": {
+        "SIGN_IN_ORIGIN": "https://echoframe-staging.yosept.me",
+        "PREVIEW_HOST": "echoframe-staging.yosept-flores.workers.dev",
+      },
     },
   },
 }
