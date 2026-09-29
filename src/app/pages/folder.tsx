@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { FolderX, MoreHorizontal, Pencil, Radio, Trash2 } from "lucide-react";
+import {
+  Download,
+  FolderX,
+  MoreHorizontal,
+  Pencil,
+  Radio,
+  Trash2,
+} from "lucide-react";
 import { Link, useLocation, useParams } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +26,7 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { exportBundle } from "@/lib/library/bundle";
 import { PageHeader } from "../components/app-shell";
 import { AssetLibrary } from "../components/asset-library";
 import { ConfirmDialog } from "../components/confirm-dialog";
@@ -46,6 +54,19 @@ export function FolderPage() {
   );
   const folder = data.data?.folder;
   const assets = data.data?.assets ?? [];
+
+  const exportFolder = (id: string) =>
+    act(async (library) => {
+      const { name, data } = await exportBundle(library, profile.id, id);
+      const url = URL.createObjectURL(
+        new Blob([data as BlobPart], { type: "application/zip" }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, "Folder exported");
 
   if (data.data && !folder)
     return (
@@ -104,6 +125,9 @@ export function FolderPage() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onSelect={() => setRenaming(true)}>
                     <Pencil /> Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => exportFolder(folder.id)}>
+                    <Download /> Export as .zip
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     variant="destructive"
