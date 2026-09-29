@@ -183,15 +183,13 @@ function LiveSession({
     () => new Map(assets.map((asset) => [asset.id, asset])),
     [assets],
   );
-  const { frame, ranked } = session;
+  const { frame } = session;
   const focus = frame.focus ? byId.get(frame.focus) : undefined;
   const retained = frame.retained
     .map((id) => byId.get(id))
     .filter((asset) => asset !== undefined);
-  const related = ranked
-    .filter(({ id }) => id !== frame.focus && !frame.retained.includes(id))
-    .slice(0, 2)
-    .map(({ id }) => byId.get(id))
+  const related = frame.related
+    .map((id) => byId.get(id))
     .filter((asset) => asset !== undefined);
   const undescribed = assets.filter(needsDescription).length;
 

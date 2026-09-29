@@ -54,8 +54,14 @@ export function useEchoSession({
   );
 
   // The ask loop reads the newest values through a ref so a slow response never acts on stale input.
-  const live = useRef({ speech, material, frame, config: folder.config });
-  live.current = { speech, material, frame, config: folder.config };
+  const live = useRef({
+    speech,
+    material,
+    frame,
+    ranked,
+    config: folder.config,
+  });
+  live.current = { speech, material, frame, ranked, config: folder.config };
   const judgments = useRef<Judgments>(undefined);
   const inFlight = useRef(false);
   const again = useRef(false);
@@ -177,7 +183,7 @@ export function useEchoSession({
   const pin = useCallback((id: string) => {
     clearTimeout(holdTimer.current);
     const next = {
-      ...focusOn(live.current.frame, id, Date.now()),
+      ...focusOn(live.current.frame, id, Date.now(), live.current.ranked),
       pinned: true,
     };
     live.current.frame = next;

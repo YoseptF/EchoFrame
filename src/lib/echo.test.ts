@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
   candidates,
+  changeBelow,
   direct,
   echoRequest,
   emptyFrame,
@@ -193,19 +194,65 @@ test("once the speaker moves on, the latest sentence leads whatever the recency 
   );
 });
 
-test("a clear change of subject cuts the minimum hold short", () => {
+test("the frame never changes within a thought, even when another item edges ahead", () => {
   const frame = focusOn(emptyFrame, "forest", 0);
-  const moved = judged({ latest: { forest: 0.1, river: 0.9 } });
+  const drift = judged({
+    latest: { forest: 0.2, river: 0.8 },
+    thread: { forest: 0.45, river: 0.55 },
+    sameThought: 0.8,
+  });
+  const result = direct(frame, drift, defaults, 60_000);
+  expect(result.verdict).toBe("continuing");
+  expect(result.frame).toBe(frame);
+  // Continuity sets how sure Jev must be that the subject changed.
+  expect(changeBelow(50)).toBeCloseTo(0.3);
+  const loose = {
+    ...defaults,
+    weights: { ...defaults.weights, continuity: 0 },
+  };
   expect(
-    direct(frame, { ...moved, sameThought: 0.05 }, defaults, 2000).verdict,
+    direct(frame, { ...drift, sameThought: 0.45 }, loose, 60_000).verdict,
   ).toBe("switched");
-  expect(
-    direct(frame, { ...moved, sameThought: 0.05 }, defaults, 1000),
-  ).toMatchObject({ verdict: "holding", retryAt: 1500 });
 });
 
-test("talking at a normal pace, each change of subject lands on the next sentence", () => {
+test("even a change of subject waits out the minimum hold", () => {
+  const frame = focusOn(emptyFrame, "forest", 0);
+  const moved = judged({
+    latest: { forest: 0.1, river: 0.9 },
+    sameThought: 0.05,
+  });
+  expect(direct(frame, moved, defaults, 2000)).toMatchObject({
+    verdict: "holding",
+    retryAt: 6000,
+  });
+  expect(direct(frame, moved, defaults, 6000).verdict).toBe("switched");
+});
+
+test("what surrounds the focus is chosen when it changes and then stays put", () => {
+  const ranked = [
+    { id: "river", score: 0.6 },
+    { id: "forest", score: 0.2 },
+    { id: "note", score: 0.1 },
+    { id: "sky", score: 0.05 },
+  ];
+  const frame = focusOn(focusOn(emptyFrame, "forest", 0), "river", 1, ranked);
+  expect(frame).toMatchObject({
+    focus: "river",
+    retained: ["forest"],
+    related: ["note", "sky"],
+  });
+  const later = direct(
+    frame,
+    judged({ latest: { forest: 0.1, river: 0.9 }, sameThought: 0.9 }),
+    defaults,
+    60_000,
+  );
+  expect(later.frame).toBe(frame);
+});
+
+test("talking at a normal pace, the frame changes once per subject and never within one", () => {
   const subjects = [
+    "comics",
     "comics",
     "comics",
     "iron man",
@@ -213,8 +260,10 @@ test("talking at a normal pace, each change of subject lands on the next sentenc
     "disney",
     "disney",
   ];
-  const all = ["comics", "iron man", "disney"];
+  const all = ["comics", "iron man", "disney", "stan lee"];
+  const pace = { ...defaults, holdSeconds: 5 };
   let frame = emptyFrame;
+  let changes = 0;
   subjects.forEach((subject, index) => {
     const previous = subjects[Math.max(0, index - 2)]!;
     const fresh = index === 0 || subjects[index - 1] !== subject;
@@ -223,16 +272,22 @@ test("talking at a normal pace, each change of subject lands on the next sentenc
         all.map((id) => [id, id === main ? a : id === second ? b : 0.05]),
       );
     const judgments: Judgments = {
-      latest: spread(subject, "", 0.85, 0),
-      // Right after a change the window is still mostly the previous subject.
+      // Mid-thought, a related item can edge ahead on one sentence ("stan lee" while on comics).
+      latest:
+        index === 1
+          ? spread("stan lee", subject, 0.6, 0.3)
+          : spread(subject, "", 0.85, 0),
       thread: fresh
         ? spread(previous, subject, 0.6, 0.3)
         : spread(subject, previous, 0.6, 0.3),
       fits: 0.95,
       sameThought: frame.focus ? (frame.focus === subject ? 0.9 : 0.1) : null,
     };
-    // One sentence every two and a half seconds, no pauses.
-    frame = direct(frame, judgments, defaults, index * 2500).frame;
+    // A sentence every two and a half seconds, no pauses.
+    const result = direct(frame, judgments, pace, index * 2500);
+    if (result.frame.focus !== frame.focus) changes++;
+    frame = result.frame;
     expect(frame.focus).toBe(subject);
   });
+  expect(changes).toBe(3);
 });
