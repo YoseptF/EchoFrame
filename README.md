@@ -75,6 +75,11 @@ The app is local-first. There is no database:
   is the seam an installed app can implement against the real disk; tests use the in-memory store.
 - **Folders** hold image, audio, and text assets. Each asset has a description and tags; Jev
   matches speech against words, so media without a description is flagged.
+- **Import and export** use the [folder format](docs/folder-format.md): an `echoframe.json`
+  manifest beside the files, as a directory or `.zip`. Agents and scripts can prepare a whole
+  folder, descriptions and tags included, and the app imports it as a new folder (dashboard) or
+  into an existing one (folder page, or drop the `.zip`). Export writes the same format, which
+  doubles as a backup (`src/lib/library/bundle.ts`).
 - **Echo settings** per folder: starting mode, speech window, minimum hold, the relevance,
   recency and continuity weights, and the speech language.
 - **Live sessions** (`/app/folders/<id>/live`) listen with the browser's speech recognition, or
