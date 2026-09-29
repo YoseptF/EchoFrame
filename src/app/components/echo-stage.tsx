@@ -1,15 +1,14 @@
-import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { AudioLines, ScanLine } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { AudioLines, FileText } from "lucide-react";
 import { useEffects } from "@/components/effects/motion-system";
-import { Card, CardContent } from "@/components/ui/card";
 import type { Asset } from "@/lib/library/library";
 import type { FrameMode } from "@/lib/presentation";
 import { cn } from "@/lib/utils";
 import { useAssetUrl } from "../library-context";
 
-// A live frame built from the folder's own material. It follows the same mode contracts and art
-// treatment as the authored `PresentationStage`: Presentation is a composed slide, Backdrop is one
-// clear image, Spatial is connected panels around the current focus.
+// A live frame built from the folder's own material, following the same mode contracts and art
+// treatment as the authored `PresentationStage`. It is for an audience: titles and imagery, never
+// the descriptions Jev matches against, and it only changes when the focus does.
 
 export type StageContent = {
   folderId: string;
@@ -17,59 +16,75 @@ export type StageContent = {
   focus?: Asset;
   /** Earlier focus, most recent first. */
   retained: Asset[];
-  /** The next-best matches for what is being said. */
+  /** The closest other matches when the focus changed. */
   related: Asset[];
 };
 
-const MotionCard = motion.create(Card);
 const ease = [0.22, 1, 0.36, 1] as const;
 
+/** A note's first sentence, when it is short enough to read at a glance from the back of a room. */
+function glance(asset: Asset) {
+  const text = (asset.text ?? "").trim().replace(/\s+/g, " ");
+  const sentence = text.match(/^.+?[.!?](?=\s|$)/)?.[0] ?? text;
+  return sentence.length <= 110 ? sentence : null;
+}
+
+/**
+ * `contain` shows the whole image, such as a poster or a cover, over a blurred copy of itself, so
+ * nothing is cropped and the area never looks empty.
+ */
 function AssetImage({
   folderId,
   asset,
+  fit = "cover",
   className,
 }: {
   folderId: string;
   asset: Asset;
+  fit?: "cover" | "contain";
   className?: string;
 }) {
   const url = useAssetUrl(folderId, asset);
-  return url ? (
-    <img
+  const { enabled } = useEffects();
+  if (!url) return <div className={cn("h-full w-full", className)} />;
+  const image = (
+    <motion.img
       src={url}
       alt={asset.description || asset.name}
-      className={cn("h-full w-full object-cover", className)}
+      initial={enabled ? { scale: 1.035 } : false}
+      animate={{ scale: 1 }}
+      transition={{ duration: enabled ? 1.6 : 0, ease }}
+      className={cn(
+        "relative h-full w-full",
+        fit === "contain" ? "object-contain" : "object-cover",
+      )}
     />
-  ) : (
-    <div className={cn("h-full w-full", className)} />
+  );
+  if (fit === "cover")
+    return <div className={cn("overflow-hidden", className)}>{image}</div>;
+  return (
+    <div className={cn("relative overflow-hidden", className)}>
+      <img
+        src={url}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full scale-110 object-cover opacity-45 blur-2xl"
+      />
+      {image}
+    </div>
   );
 }
-
-const excerpt = (asset: Asset, length: number) => {
-  const text = (asset.text ?? asset.description).trim();
-  return text.length > length ? `${text.slice(0, length)}…` : text;
-};
 
 const firstImage = (...groups: (Asset | undefined)[][]) =>
   groups.flat().find((asset) => asset?.kind === "image");
 
-function Presentation({
-  folderId,
-  talk,
-  focus,
-  retained,
-  related,
-}: StageContent) {
-  const visual =
-    focus?.kind === "image" ? focus : firstImage(related, retained);
-  const body = focus
-    ? focus.kind === "text"
-      ? excerpt(focus, 220)
-      : focus.description
-    : "";
+function Presentation({ folderId, talk, focus, related }: StageContent) {
+  // A note borrows the closest image from the moment it came forward, never an unrelated earlier one.
+  const visual = focus?.kind === "image" ? focus : firstImage(related);
+  const line = focus?.kind === "text" ? glance(focus) : null;
   return (
     <div
-      className="relative flex h-full flex-col overflow-hidden bg-[#101110] text-[#f4f3ec]"
+      className="relative flex h-full overflow-hidden bg-[#101110] text-[#f4f3ec]"
       data-renderer="presentation"
     >
       {visual && (
@@ -77,49 +92,33 @@ function Presentation({
           <AssetImage
             folderId={folderId}
             asset={visual}
-            className={cn(
-              "absolute inset-y-0 right-0",
-              focus?.kind === "image" ? "w-[52%]" : "w-full opacity-35",
-            )}
+            fit="contain"
+            className="absolute inset-y-0 right-0 w-[50%]"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#101110] via-[#101110]/75 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#101110] via-[#101110]/85 via-45% to-transparent" />
         </>
       )}
-      <div className="relative flex h-full flex-col p-[6cqw]">
-        <div className="flex items-center justify-between gap-[3cqw] text-[1.3cqw] font-medium tracking-[0.22em] text-white/60">
-          <span className="truncate">{talk.toUpperCase()}</span>
-          {focus && (
-            <span className="shrink-0">{focus.kind.toUpperCase()}</span>
+      <div className="relative flex h-full w-[56%] flex-col p-[6cqw]">
+        <p className="truncate text-[1.3cqw] font-medium tracking-[0.22em] text-white/55">
+          {talk.toUpperCase()}
+        </p>
+        <div className="mt-auto">
+          <p className="line-clamp-3 pb-[0.12em] text-[5.6cqw] leading-[1.04] font-semibold tracking-[-0.06em] text-balance">
+            {focus?.name ?? talk}
+          </p>
+          {line && (
+            <p className="mt-[3cqw] text-[2.4cqw] leading-snug text-white/75">
+              {line}
+            </p>
+          )}
+          {focus?.kind === "audio" && (
+            <AudioLines
+              strokeWidth={1.2}
+              className="mt-[3cqw] size-[6cqw] text-[#d6eea3]"
+            />
           )}
         </div>
-        {focus ? (
-          <>
-            <p className="mt-auto line-clamp-3 w-[62%] text-[6.2cqw] leading-[1.04] font-semibold tracking-[-0.06em] text-balance">
-              {focus.name}
-            </p>
-            {body && (
-              <p className="mt-[3cqw] line-clamp-4 w-[52%] text-[1.85cqw] leading-relaxed text-white/70">
-                {body}
-              </p>
-            )}
-            {focus.kind === "audio" && (
-              <AudioLines
-                strokeWidth={1.2}
-                className="mt-[3cqw] size-[7cqw] text-[#d6eea3]"
-              />
-            )}
-          </>
-        ) : (
-          <p className="mt-auto w-[70%] text-[7cqw] leading-[1.02] font-semibold tracking-[-0.065em] text-balance">
-            {talk}
-          </p>
-        )}
-        <div className="mt-auto flex items-end justify-between pt-[4cqw]">
-          <span className="h-[0.5cqw] w-[6cqw] bg-[#d6eea3]" />
-          <span className="text-[1.15cqw] tracking-[0.12em] text-white/45">
-            ECHOFRAME / PRESENTATION
-          </span>
-        </div>
+        <span className="mt-[5cqw] h-[0.5cqw] w-[6cqw] bg-[#d6eea3]" />
       </div>
     </div>
   );
@@ -133,172 +132,106 @@ function Backdrop({ folderId, focus, retained, related }: StageContent) {
       className="relative h-full overflow-hidden bg-[#101110]"
       data-renderer="backdrop"
     >
-      {image && <AssetImage folderId={folderId} asset={image} />}
+      {image && (
+        <AssetImage folderId={folderId} asset={image} className="h-full" />
+      )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/10" />
     </div>
   );
 }
 
-function PanelBody({
-  folderId,
-  asset,
-  size,
-}: {
-  folderId: string;
-  asset: Asset;
-  size: "focus" | "side";
-}) {
-  const focus = size === "focus";
-  if (asset.kind === "image")
+/** A quiet reminder of nearby material: a picture and its title, or a note's title. */
+function ContextTile({ folderId, asset }: { folderId: string; asset: Asset }) {
+  if (asset.kind !== "image")
     return (
-      <div className="relative min-h-0 flex-1">
-        <AssetImage
-          folderId={folderId}
-          asset={asset}
-          className="brightness-75 saturate-50"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#071114] via-transparent to-transparent" />
-        {focus && (
-          <div
-            aria-hidden="true"
-            className="absolute inset-[10%] rounded-[50%] border border-[#9de4da]/35"
+      <div className="flex min-h-0 flex-col justify-end gap-[1.5cqw] overflow-hidden rounded-sm border border-[#83d7d2]/20 bg-[#0c1e23] p-[2.5cqw] @min-[540px]/stage:p-[1.6cqw]">
+        {asset.kind === "audio" && (
+          <AudioLines
+            strokeWidth={1.2}
+            className="size-[4cqw] text-[#83d7d2]/70 @min-[540px]/stage:size-[2.4cqw]"
           />
         )}
-        <p
-          className={cn(
-            "absolute right-[1.5cqw] bottom-[1.5cqw] left-[1.5cqw] line-clamp-2 leading-snug text-[#bfe7df]",
-            focus ? "text-[1.5cqw]" : "text-[1.2cqw]",
-          )}
-        >
-          {asset.description}
+        <p className="line-clamp-3 text-[2.6cqw] leading-snug font-medium text-[#cdf2ee]/90 @min-[540px]/stage:text-[1.7cqw]">
+          {asset.name}
         </p>
       </div>
     );
   return (
-    <CardContent className="min-h-0 flex-1 overflow-hidden p-[2cqw]">
-      {asset.kind === "audio" && (
-        <AudioLines
-          strokeWidth={1.2}
-          className="mb-[1.5cqw] size-[4cqw] text-[#83d7d2]"
+    <div className="flex min-h-0 flex-col gap-[1cqw]">
+      <div className="min-h-0 flex-1 overflow-hidden rounded-sm border border-[#83d7d2]/20 bg-[#0c1e23]">
+        <AssetImage
+          folderId={folderId}
+          asset={asset}
+          fit="contain"
+          className="h-full opacity-85"
         />
-      )}
-      <p
-        className={cn(
-          "leading-[1.6] text-[#b7d3d2]/85",
-          focus ? "text-[2.1cqw]" : "line-clamp-5 text-[1.35cqw]",
-        )}
-      >
-        {excerpt(asset, focus ? 420 : 180)}
-      </p>
-    </CardContent>
-  );
-}
-
-function Panel({
-  folderId,
-  asset,
-  label,
-  size,
-  className,
-}: {
-  folderId: string;
-  asset: Asset;
-  label: string;
-  size: "focus" | "side";
-  className?: string;
-}) {
-  const { enabled } = useEffects();
-  return (
-    <MotionCard
-      layoutId={enabled ? asset.id : undefined}
-      initial={enabled ? { opacity: 0, y: 18 } : false}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ type: "spring", stiffness: 110, damping: 22 }}
-      className={cn(
-        "min-h-0 gap-0 overflow-hidden rounded-sm py-0 text-[#cdf2ee]",
-        size === "focus"
-          ? "border-[#83d7d2]/35 bg-[#0b2025]/70 shadow-[0_0_30px_#63ccc90a]"
-          : "border-[#83d7d2]/25 bg-[#0c1e23]/90",
-        className,
-      )}
-    >
-      <div
-        className={cn(
-          "flex items-center justify-between gap-[1cqw] border-b border-[#83d7d2]/20 px-[1.6cqw] py-[1cqw] tracking-widest text-[#83d7d2]/70",
-          size === "focus" ? "text-[1.05cqw]" : "text-[0.95cqw]",
-        )}
-      >
-        <span className="shrink-0">{label}</span>
-        <span className="truncate">{asset.name.toUpperCase()}</span>
       </div>
-      <PanelBody folderId={folderId} asset={asset} size={size} />
-    </MotionCard>
+      <p className="truncate text-[1.9cqw] text-[#b7d3d2]/80 @min-[540px]/stage:text-[1.3cqw]">
+        {asset.name}
+      </p>
+    </div>
   );
 }
 
 function Spatial({ folderId, talk, focus, retained, related }: StageContent) {
-  const side = [
-    ...retained.slice(0, 1).map((asset) => ({ asset, label: "RETAINED" })),
-    ...related.map((asset) => ({ asset, label: "CONNECTED" })),
-  ].slice(0, 2);
+  // A note in focus is illustrated by the closest image from the moment it came forward.
+  const visual = focus?.kind === "image" ? focus : firstImage(related);
+  const line = focus?.kind === "text" ? glance(focus) : null;
+  const context = [...retained.slice(0, 1), ...related]
+    .filter((asset) => asset !== visual)
+    .slice(0, 3);
   return (
     <div
-      className="relative flex h-full flex-col gap-[3cqw] overflow-hidden bg-[#071114] p-[5cqw] text-[#cdf2ee] @min-[540px]/stage:gap-[2.5cqw] @min-[540px]/stage:p-[4cqw]"
+      className="relative grid h-full grid-rows-[auto_minmax(0,3fr)_minmax(0,1fr)] gap-[3cqw] overflow-hidden bg-[#071114] p-[5cqw] text-[#cdf2ee] @min-[540px]/stage:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] @min-[540px]/stage:grid-rows-[auto_minmax(0,1fr)] @min-[540px]/stage:gap-x-[3.5cqw] @min-[540px]/stage:gap-y-[2.5cqw] @min-[540px]/stage:p-[4.5cqw]"
       data-renderer="spatial"
     >
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#77d5cf08_1px,transparent_1px),linear-gradient(to_bottom,#77d5cf08_1px,transparent_1px)] bg-[size:4cqw_4cqw]"
       />
-      <div className="relative flex items-center justify-between gap-3 border-b border-[#83d7d2]/20 pb-[2cqw]">
-        <div className="min-w-0">
-          <p className="truncate text-[2cqw] tracking-[0.2em] text-[#83d7d2]/60 @min-[540px]/stage:text-[1.05cqw]">
-            CONTEXT SPACE / {talk.toUpperCase()}
+      <div className="relative @min-[540px]/stage:col-span-2">
+        <p className="line-clamp-2 pb-[0.12em] text-[6cqw] leading-[1.08] font-medium tracking-[-0.045em] text-balance @min-[540px]/stage:text-[3.6cqw]">
+          {focus?.name ?? talk}
+        </p>
+        {line && (
+          <p className="mt-[1.5cqw] text-[3.4cqw] leading-snug text-[#b7d3d2]/85 @min-[540px]/stage:mt-[1cqw] @min-[540px]/stage:text-[1.9cqw]">
+            {line}
           </p>
-          <p className="mt-[0.8cqw] truncate text-[5.5cqw] leading-tight font-medium tracking-[-0.035em] @min-[540px]/stage:text-[3.2cqw]">
-            {focus?.name ?? "Listening for the first thought"}
-          </p>
-        </div>
-        <ScanLine
-          className="size-[5cqw] shrink-0 text-[#83d7d2]/50 @min-[540px]/stage:size-[3cqw]"
-          strokeWidth={1}
-        />
+        )}
       </div>
-      <LayoutGroup>
-        <div className="relative grid min-h-0 flex-1 grid-rows-[3fr_2fr] gap-[3cqw] @min-[540px]/stage:grid-cols-[1.45fr_1fr] @min-[540px]/stage:grid-rows-1 @min-[540px]/stage:gap-[2.5cqw]">
-          <AnimatePresence mode="popLayout">
-            {focus && (
-              <Panel
-                key={focus.id}
-                folderId={folderId}
-                asset={focus}
-                label="IN FOCUS"
-                size="focus"
-                className="flex flex-col"
+
+      <div className="relative min-h-0 overflow-hidden rounded-sm border border-[#83d7d2]/30 bg-[#0b2025]/70 shadow-[0_0_40px_#63ccc90d]">
+        {visual ? (
+          <AssetImage
+            folderId={folderId}
+            asset={visual}
+            fit="contain"
+            className="h-full"
+          />
+        ) : focus ? (
+          <div className="grid h-full place-items-center">
+            {focus.kind === "audio" ? (
+              <AudioLines
+                strokeWidth={1.2}
+                className="size-[10cqw] text-[#83d7d2]/80 @min-[540px]/stage:size-[6cqw]"
+              />
+            ) : (
+              <FileText
+                strokeWidth={1}
+                className="size-[10cqw] text-[#83d7d2]/40 @min-[540px]/stage:size-[6cqw]"
               />
             )}
-          </AnimatePresence>
-          <div className="grid min-h-0 auto-rows-fr grid-cols-2 gap-[3cqw] @min-[540px]/stage:grid-cols-1 @min-[540px]/stage:gap-[2.5cqw]">
-            <AnimatePresence mode="popLayout">
-              {side.map(({ asset, label }) => (
-                <Panel
-                  key={asset.id}
-                  folderId={folderId}
-                  asset={asset}
-                  label={label}
-                  size="side"
-                  className="flex flex-col"
-                />
-              ))}
-            </AnimatePresence>
           </div>
-        </div>
-      </LayoutGroup>
-      <div className="relative hidden items-center justify-between text-[0.9cqw] tracking-[0.15em] text-[#83d7d2]/50 @min-[540px]/stage:flex">
-        <span>FOCUS + CONTEXT + CONNECTIONS</span>
-        <span>{retained.length > 0 ? "CONTEXT RETAINED" : "LIVE"}</span>
+        ) : null}
       </div>
+
+      {context.length > 0 && (
+        <div className="relative grid min-h-0 grid-cols-3 gap-[3cqw] @min-[540px]/stage:grid-cols-1 @min-[540px]/stage:grid-rows-3 @min-[540px]/stage:gap-[2cqw]">
+          {context.map((asset) => (
+            <ContextTile key={asset.id} folderId={folderId} asset={asset} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -314,17 +247,17 @@ export function EchoStage({
   className?: string;
 }) {
   const { enabled } = useEffects();
-  const key =
-    mode === "spatial"
-      ? mode
-      : mode === "backdrop"
-        ? `${mode}-${firstImage([content.focus], content.retained, content.related)?.id}`
-        : `${mode}-${content.focus?.id}`;
+  // The whole frame changes at once, and only when what it shows changes.
+  const key = `${mode}-${
+    mode === "backdrop"
+      ? firstImage([content.focus], content.retained, content.related)?.id
+      : content.focus?.id
+  }`;
   return (
     <div className={cn("@container/frame-stage w-full", className)}>
       <div
         className={cn(
-          "@container/stage relative w-full overflow-hidden rounded-sm border border-white/10",
+          "@container/stage relative w-full overflow-hidden rounded-sm border border-white/10 bg-[#080c0d]",
           mode === "spatial"
             ? "aspect-[4/5] @min-[540px]/frame-stage:aspect-[16/10]"
             : "aspect-[16/10]",
@@ -336,18 +269,10 @@ export function EchoStage({
           <motion.div
             className="absolute inset-0"
             key={key}
-            initial={
-              enabled
-                ? { opacity: 0, scale: 1.025, filter: "blur(6px)" }
-                : false
-            }
-            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-            exit={{
-              opacity: 0,
-              scale: enabled ? 0.98 : 1,
-              filter: enabled ? "blur(4px)" : "none",
-            }}
-            transition={{ duration: enabled ? 0.65 : 0, ease }}
+            initial={enabled ? { opacity: 0 } : false}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: enabled ? 0.9 : 0, ease }}
           >
             {mode === "presentation" ? (
               <Presentation {...content} />

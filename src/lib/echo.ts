@@ -153,12 +153,27 @@ export function readJudgments(
 
 export type Ranked = { id: string; score: number };
 
-/** Recency blends the latest sentence with the broader thread. */
+/**
+ * How sure Jev must be that the speaker left the thought on screen before the frame moves on.
+ * Continuity raises the bar: at 50 the chance they're still on it must fall below 0.3.
+ */
+export function changeBelow(continuity: number) {
+  return 0.5 - 0.4 * (continuity / 100);
+}
+
+/**
+ * Recency blends the latest sentence with the broader thread. The slider sets the blend while the
+ * speaker stays on one thought; once they move on, the older speech in the window describes the
+ * previous subject, so the latest sentence takes over.
+ */
 export function rank(
   judgments: Judgments,
   weights: EchoConfig["weights"],
 ): Ranked[] {
-  const recency = weights.recency / 100;
+  const recency = Math.max(
+    weights.recency / 100,
+    judgments.sameThought === null ? 0 : 1 - judgments.sameThought,
+  );
   return Object.keys(judgments.thread)
     .map((id) => ({
       id,
@@ -179,6 +194,8 @@ export type Frame = {
   focus: string | null;
   /** Earlier focus, most recent first, kept nearby as context. */
   retained: string[];
+  /** The closest other matches when the focus changed. Fixed until the next change, so the stage stays still while the speaker talks. */
+  related: string[];
   /** When the focus last changed, in milliseconds. */
   since: number;
   /** The speaker chose the focus by hand; it stays until they release it. */
@@ -188,28 +205,49 @@ export type Frame = {
 export const emptyFrame: Frame = {
   focus: null,
   retained: [],
+  related: [],
   since: 0,
   pinned: false,
 };
 
 export type Verdict =
-  "switched" | "same" | "pinned" | "holding" | "continuing" | "no-match";
+  | "switched"
+  | "same"
+  | "pinned"
+  | "holding"
+  | "continuing"
+  | "no-match";
 
 const retainedLimit = 3;
+const relatedLimit = 2;
 
-export function focusOn(frame: Frame, id: string, now: number): Frame {
+export function focusOn(
+  frame: Frame,
+  id: string,
+  now: number,
+  ranked: Ranked[] = [],
+): Frame {
   if (frame.focus === id) return frame;
+  const retained = [frame.focus, ...frame.retained]
+    .filter((item): item is string => item !== null && item !== id)
+    .slice(0, retainedLimit);
   return {
     focus: id,
-    retained: [frame.focus, ...frame.retained]
-      .filter((item): item is string => item !== null && item !== id)
-      .slice(0, retainedLimit),
+    retained,
+    related: ranked
+      .map((item) => item.id)
+      .filter((item) => item !== id && !retained.includes(item))
+      .slice(0, relatedLimit),
     since: now,
     pinned: false,
   };
 }
 
-/** Applies one set of judgments to the frame under the folder's heuristics and minimum hold. */
+/**
+ * Applies one set of judgments to the frame. The frame changes only when the speaker has moved on
+ * to another subject, never because a different item edged ahead while they develop the same
+ * thought, and never before the audience has had the minimum hold to take it in.
+ */
 export function direct(
   frame: Frame,
   judgments: Judgments,
@@ -223,14 +261,18 @@ export function direct(
     return { frame, verdict: "no-match", ranked };
   if (best.id === frame.focus) return { frame, verdict: "same", ranked };
   if (frame.focus) {
-    const current = ranked.find((item) => item.id === frame.focus)?.score ?? 0;
-    const hold =
-      (config.weights.continuity / 100) * (judgments.sameThought ?? 0) * 0.5;
-    if (best.score <= current + hold)
-      return { frame, verdict: "continuing", ranked };
+    // Without a continuity answer (the focus isn't in this mode's material), let it change.
+    const stillOnIt =
+      judgments.sameThought !== null &&
+      judgments.sameThought >= changeBelow(config.weights.continuity);
+    if (stillOnIt) return { frame, verdict: "continuing", ranked };
     const holdUntil = frame.since + config.holdSeconds * 1000;
     if (now < holdUntil)
       return { frame, verdict: "holding", ranked, retryAt: holdUntil };
   }
-  return { frame: focusOn(frame, best.id, now), verdict: "switched", ranked };
+  return {
+    frame: focusOn(frame, best.id, now, ranked),
+    verdict: "switched",
+    ranked,
+  };
 }

@@ -275,10 +275,15 @@ signed-in pages do not run ambient effects.
 - **Live sessions follow the frame contract.** `EchoStage` renders the folder's own material with
   the same mode rules and art treatment as `PresentationStage`: Presentation is a slide built from
   the focus item, Backdrop shows one image and never text, Spatial keeps retained and connected
-  items around the focus. Jev decides _which_ material; code decides _when_ (relevance threshold,
-  recency blend, continuity bias, minimum hold). Match percentages in the side panel are Jev's real
-  probabilities, never decoration. The microphone starts only from "Start listening", and typing a
-  line works everywhere as the fallback.
+  items around the focus. Jev decides _which_ material; code decides _when_: only on a change of
+  subject, after the minimum hold, and never because another item edged ahead mid-thought. The
+  stage is for an audience: it shows titles, imagery, and at most one short sentence of a note,
+  never the descriptions written for Jev. Posters and covers are shown whole (`contain` over a
+  blurred copy), not cropped. The stage stays still between changes; context around the focus is
+  chosen when the focus changes, and a change is a single crossfade with no layout or scale
+  animation of panels. Match percentages in the side panel are Jev's real probabilities, never
+  decoration. The microphone starts only from "Start listening", and typing a line works
+  everywhere as the fallback.
 - **Keys stay the user's.** The Jev key is stored in the profile and sent only through the
   `/api/jev` relay. Check a key before saving it and explain failures in plain words.
 - **Page anatomy.** Every signed-in page starts with `PageHeader` (sidebar trigger, breadcrumb,

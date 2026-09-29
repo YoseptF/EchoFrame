@@ -87,7 +87,11 @@ The app is local-first. There is no database:
   fits the latest sentence and the broader thread (two Choice questions), whether anything fits
   (Noul), and whether the thought on screen continues (Noul). `src/lib/echo.ts` turns those
   answers into the frame with the folder's relevance, recency and continuity weights and minimum
-  hold, and `EchoStage` renders it in Presentation, Backdrop or Spatial.
+  hold, and `EchoStage` renders it in Presentation, Backdrop or Spatial. The frame changes only
+  when Jev says the speaker has left the thought on screen (continuity sets how sure), and then
+  follows the latest sentence rather than the older speech in the window. The items around the
+  focus are chosen at that moment and stay put, so nothing on stage moves while the speaker
+  develops a thought.
 - **Jev** calls go to `POST /api/jev`. TypeSafe does not accept browser origins, so the Worker
   forwards the request with the user's own key and stores nothing. Only signed-in sessions can
   use the relay. Settings checks a key with one small request before saving it.
