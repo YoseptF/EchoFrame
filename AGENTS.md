@@ -25,6 +25,8 @@
   behind `src/lib/library/`, one library per Google account. Sign-in is Google OAuth in the Worker
   (`src/auth.ts`) with a signed session cookie; there is no database. Jev calls go through the
   Worker's `/api/jev` relay, which requires a session, forwards the user's key and stores nothing.
+- To prepare material for a folder (images, notes, descriptions, tags), write the
+  [folder format](docs/folder-format.md) and import it; don't script the browser.
 - Verify visual changes in the browser on desktop and mobile, including actual scrolling and
   interaction. Put every scratch artifact in `tmp/`. `paseo script start dev` runs the dev server
   from `paseo.json`.

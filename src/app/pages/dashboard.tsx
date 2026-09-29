@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   ArrowRight,
   Folder,
+  FolderInput,
   FolderPlus,
   KeyRound,
   MoreHorizontal,
@@ -48,6 +49,7 @@ import type { FolderSummary } from "@/lib/library/library";
 import { modes } from "@/lib/presentation";
 import { PageHeader } from "../components/app-shell";
 import { ConfirmDialog } from "../components/confirm-dialog";
+import { ImportDialog } from "../components/import-dialog";
 import {
   NewFolderDialog,
   RenameFolderDialog,
@@ -79,14 +81,24 @@ export function DashboardPage() {
       <PageHeader
         crumbs={[{ label: "Library" }]}
         actions={
-          <NewFolderDialog
-            onCreated={openFolder}
-            trigger={
-              <Button size="sm" className="rounded-full">
-                <Plus /> New folder
-              </Button>
-            }
-          />
+          <>
+            <ImportDialog
+              onImported={(id) => openFolder({ id })}
+              trigger={
+                <Button size="sm" variant="outline" className="rounded-full">
+                  <FolderInput /> Import
+                </Button>
+              }
+            />
+            <NewFolderDialog
+              onCreated={openFolder}
+              trigger={
+                <Button size="sm" className="rounded-full">
+                  <Plus /> New folder
+                </Button>
+              }
+            />
+          </>
         }
       />
       <div className="grid gap-8 px-5 py-8 sm:px-8 xl:px-12 xl:py-12">

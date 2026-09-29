@@ -8,6 +8,7 @@ import {
 import {
   AudioLines,
   FileText,
+  FolderInput,
   ImageIcon,
   NotebookPen,
   Search,
@@ -60,6 +61,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAssetUrl, useLibraryAction, useProfile } from "../library-context";
 import { AssetSheet } from "./asset-sheet";
+import { ImportDialog } from "./import-dialog";
 import { TagInput } from "./tag-input";
 
 const accept = "image/*,audio/*,text/plain,text/markdown,.md,.markdown,.txt";
@@ -93,6 +95,7 @@ export function AssetLibrary({
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<AssetKind | "all">("all");
   const [editingId, setEditingId] = useState<string>();
+  const [importing, setImporting] = useState<File[]>();
 
   const folderTags = useMemo(
     () => [...new Set(assets.flatMap((asset) => asset.tags))].sort(),
@@ -104,6 +107,9 @@ export function AssetLibrary({
   const undescribed = assets.filter(needsDescription).length;
 
   async function upload(files: File[]) {
+    // A .zip is a prepared folder: import it with its descriptions and tags.
+    const zip = files.find((file) => /\.zip$/i.test(file.name));
+    if (zip) return setImporting([zip]);
     const accepted = files.filter((file) => assetKind(file));
     const rejected = files.length - accepted.length;
     if (rejected)
@@ -153,6 +159,9 @@ export function AssetLibrary({
         {uploading ? `Adding ${uploading}…` : "Add files"}
       </Button>
       <NoteDialog folderId={folderId} folderTags={folderTags} />
+      <Button variant="outline" onClick={() => setImporting([])}>
+        <FolderInput /> Import
+      </Button>
     </>
   );
 
@@ -164,6 +173,12 @@ export function AssetLibrary({
         dragging && "ring-2 ring-primary ring-offset-4 ring-offset-background",
       )}
     >
+      <ImportDialog
+        folderId={folderId}
+        open={importing !== undefined}
+        onOpenChange={(open) => !open && setImporting(undefined)}
+        files={importing}
+      />
       <input
         ref={input}
         type="file"
